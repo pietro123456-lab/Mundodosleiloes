@@ -14,6 +14,54 @@
 <div class="panel" style="margin-top:14px"><h3>Administração local</h3><p>Demo local: sem segurança de servidor. Valores e permissões podem ser alterados pelo navegador.</p><button onclick="adminGrantCoins()">Adicionar moedas à sua conta</button><button onclick="adminResetClaim()">Desvincular ADM</button></div></section><section id="profile" class="tab hidden"><h2 class="sectionTitle">Perfil</h2><div class="panel" id="profilePanel"></div><h2 class="sectionTitle">Histórico</h2><div class="panel log" id="history"></div></section></main>
 <nav class="bottom" id="bottomNav"></nav></div>
 <script>
+const game=document.getElementById('game');
+const auth=document.getElementById('auth');
+const pass=document.getElementById('pass');
+const drawer=document.getElementById('drawer');
+const shade=document.getElementById('shade');
+const sideNav=document.getElementById('sideNav');
+const bottomNav=document.getElementById('bottomNav');
+const roomsList=document.getElementById('roomsList');
+const roomPreview=document.getElementById('roomPreview');
+const chestChoices=document.getElementById('chestChoices');
+const filters=document.getElementById('filters');
+const odds=document.getElementById('odds');
+const freeUses=document.getElementById('freeUses');
+const coins=document.getElementById('coins');
+const income=document.getElementById('income');
+const welcome=document.getElementById('welcome');
+const statCoins=document.getElementById('statCoins');
+const statItems=document.getElementById('statItems');
+const statValue=document.getElementById('statValue');
+const level=document.getElementById('level');
+const inventoryGrid=document.getElementById('inventoryGrid');
+const marketGrid=document.getElementById('marketGrid');
+const itemName=document.getElementById('itemName');
+const itemEmoji=document.getElementById('itemEmoji');
+const itemPrice=document.getElementById('itemPrice');
+const auctionGrid=document.getElementById('auctionGrid');
+const luckStatus=document.getElementById('luckStatus');
+const luckTimer=document.getElementById('luckTimer');
+const luckOffers=document.getElementById('luckOffers');
+const admUsers=document.getElementById('admUsers');
+const admItems=document.getElementById('admItems');
+const admCoins=document.getElementById('admCoins');
+const admChest=document.getElementById('admChest');
+const admItem=document.getElementById('admItem');
+const admMutation=document.getElementById('admMutation');
+const admFirstOnly=document.getElementById('admFirstOnly');
+const admScheduledInfo=document.getElementById('admScheduledInfo');
+const admLuckTarget=document.getElementById('admLuckTarget');
+const admLuckMultiplier=document.getElementById('admLuckMultiplier');
+const admLuckMinutes=document.getElementById('admLuckMinutes');
+const profilePanel=document.getElementById('profilePanel');
+const history=document.getElementById('history');
+const auctionClock=document.getElementById('auctionClock');
+const auctionPlayer=document.getElementById('auctionPlayer');
+const auctionBot=document.getElementById('auctionBot');
+const auctionMin=document.getElementById('auctionMin');
+</script>
+<script>
 const KEY='mundoleiloes_users_v2',SESSION='mundoleiloes_session_v2';const luckMultipliers=[2,4,6,8,10,12,14,16,18,20],luckPrices={2:5000,4:20000,6:60000,8:150000,10:500000,12:1500000,14:5000000,16:15000000,18:50000000,20:150000000};let creating=false,userKey='',data=null,current='home',chest='Grátis',filter='Todos';
 const nav=[['home','⌂','Início'],['rooms','♧','Salas'],['inventory','▣','Inventário'],['market','▤','Mercado'],['auctions','⚒','Leilões'],['luck','🍀','Loja da Sorte']];
 const rooms=[['Leilão gratuito','Grátis','1 abertura grátis diária'],['Baú de Bronze','5K','Para começar a coleção'],['Cofre de Prata','25K','Mais chances de itens raros'],['Tesouro de Ouro','50K','Itens de alto valor'],['Baú Platina','250K','Raridades superiores'],['Baú Diamante','1M','Itens épicos e míticos'],['Baú Astral','5M','Itens míticos e divinos'],['Cofre Celestial','25M','Itens celestiais'],['Câmara Real','100M','Baú premium de coleção'],['Baú Transcendente','500M','Uma chance minúscula de itens supremos']];
