@@ -10,13 +10,14 @@ Este repositório agora contém o esquema SQL inicial com RLS. O backend ainda N
 2. Abra SQL Editor, cole e execute o conteúdo de `supabase/schema.sql`.
 3. Em Authentication > Providers, habilite Email. Configure confirmação de email conforme preferir.
 4. Copie Project URL e a chave publicável/anon (nunca a service_role key).
-5. Integre o frontend com Supabase Auth e migre o salvamento do jogo para `game_state`.
-6. Promova o primeiro administrador somente por operação administrativa protegida no servidor/SQL Editor, conferindo o UUID do usuário correto. Nunca permita que o próprio usuário altere `profiles.role`.
+5. O frontend já está conectado ao Supabase Auth e ao `game_state`; após atualizar o SQL, abra a Área ADM e teste a lista de jogadores.
+6. Promova ou remova administradores somente pelo SQL Editor, conferindo o UUID correto. Nunca permita que o próprio usuário altere `profiles.role`.
+7. O botão **Dar moedas a um jogador** usa `admin_list_players()` e `admin_grant_coins(...)`. As funções verificam `profiles.role = 'admin'` no banco antes de mostrar contas ou alterar saldo.
 
 ## Segurança
 - RLS limita leitura e escrita do progresso ao usuário autenticado.
 - Não existe política para o jogador alterar `role`.
-- A área ADM não deve ser considerada segura até que as Edge Functions/admin endpoints validem JWT e role no servidor.
+- As operações de concessão de moedas verificam a função ADM no próprio banco por funções `SECURITY DEFINER`; o navegador não pode escolher livremente o saldo de outra conta.
 - A senha ADM antiga em localStorage não é autenticação segura e deve ser desativada na migração.
 
 ## Limitação
