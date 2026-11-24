@@ -3,5 +3,6 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm install --omit=dev
 COPY src ./src
+COPY sql ./sql
 EXPOSE 3000
 CMD ["npm","start"]
