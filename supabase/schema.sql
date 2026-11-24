@@ -260,3 +260,39 @@ revoke all on function public.admin_collect_player_item(uuid,text) from public;
 grant execute on function public.admin_list_player_items(uuid) to authenticated;
 grant execute on function public.admin_give_catalog_item(uuid,text,text,bigint,text) to authenticated;
 grant execute on function public.admin_collect_player_item(uuid,text) to authenticated;
+
+
+-- Ranking global: somente usuários autenticados podem consultar.
+-- A função lê os estados de todos os jogadores sem abrir acesso direto às tabelas.
+create or replace function public.leaderboard_top_players()
+returns table(position bigint, user_id uuid, username text, coins bigint)
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'É necessário entrar na conta.';
+  end if;
+
+  return query
+    select ranked.position, ranked.user_id, ranked.username, ranked.coins
+    from (
+      select
+        row_number() over (
+          order by coalesce(nullif(gs.state ->> 'coins', '')::bigint, 1000) desc,
+                   lower(p.username)
+        ) as position,
+        p.id as user_id,
+        p.username,
+        coalesce(nullif(gs.state ->> 'coins', '')::bigint, 1000) as coins
+      from public.profiles p
+      left join public.game_state gs on gs.user_id = p.id
+    ) as ranked
+    order by ranked.position
+    limit 100;
+end;
+$$;
+
+revoke all on function public.leaderboard_top_players() from public;
+grant execute on function public.leaderboard_top_players() to authenticated;
