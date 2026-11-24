@@ -181,7 +181,7 @@ async function adminCollectPlayerItem(){
  if(!target){admCollectItemMessage.textContent='Selecione o jogador.';return}
  if(!itemId){admCollectItemMessage.textContent='Selecione o item que será recebido.';return}
  const btn=document.getElementById('admCollectItemBtn');btn.disabled=true;btn.textContent='Transferindo…';
- const {data:itemName,error}=await sb.rpc('admin_collect_player_item',{p_target_user_id:target,p_item_id:itemId});
+ const {data:result,error}=await sb.rpc('admin_collect_player_item',{p_target_user_id:target,p_item_id:itemId});
  btn.disabled=false;btn.textContent='Receber item na conta ADM';
  if(error){admCollectItemMessage.textContent='Falha ao receber: '+error.message;return}
  const receivedName=result?.item_name||'Item';
