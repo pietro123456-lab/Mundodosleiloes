@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { readFile } from "node:fs/promises";
 import express from "express";
 import cors from "cors";
 import bcrypt from "bcryptjs";
@@ -38,4 +39,4 @@ async function bootstrapAdmin(){
  await pool.query("INSERT INTO players(username,password_hash,is_admin) VALUES($1,$2,true)",[username,hash]);
  console.log("Initial administrator created from environment.");
 }
-bootstrapAdmin().then(()=>app.listen(Number(process.env.PORT||3000),()=>console.log("Mundo dos Leilões API online"))).catch(err=>{console.error("Startup failed:",err.message);process.exit(1);});
+bootstrapAdmin().then(async()=>{const schema=await readFile(new URL("../sql/schema.sql",import.meta.url),"utf8");await pool.query(schema);app.listen(Number(process.env.PORT||3000),()=>console.log("Mundo dos Leilões API online"));}).catch(err=>{console.error("Startup failed:",err.message);process.exit(1);});
