@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS global_luck (
 );
 INSERT INTO global_luck(id) VALUES(1) ON CONFLICT DO NOTHING;
 CREATE TABLE IF NOT EXISTS auctions (
- id uuid PRIMARY PRIMARY KEY DEFAULT gen_random_uuid(),
+ id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
  seller_id uuid REFERENCES players(id),
  item_name text NOT NULL,
  rarity text NOT NULL,
