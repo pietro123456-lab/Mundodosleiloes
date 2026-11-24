@@ -24,3 +24,40 @@ create policy "state insert own" on public.game_state for insert to authenticate
 drop policy if exists "state update own" on public.game_state;
 create policy "state update own" on public.game_state for update to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
 -- Não há política de escrita de role: jogador não pode se promover a admin.
+
+-- Cria automaticamente um perfil quando uma conta é cadastrada.
+-- O sufixo do ID torna o username único mesmo quando duas pessoas
+-- escolhem o mesmo nome de jogador.
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  base_username text;
+  final_username text;
+begin
+  base_username := coalesce(
+    nullif(btrim(new.raw_user_meta_data ->> 'username'), ''),
+    nullif(split_part(coalesce(new.email, ''), '@', 1), ''),
+    'Jogador'
+  );
+  base_username := left(regexp_replace(base_username, '[^a-zA-Z0-9_-]', '', 'g'), 32);
+  if base_username = '' then
+    base_username := 'Jogador';
+  end if;
+  final_username := base_username || '-' || left(replace(new.id::text, '-', ''), 8);
+
+  insert into public.profiles (id, username, role)
+  values (new.id, final_username, 'player')
+  on conflict (id) do nothing;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
