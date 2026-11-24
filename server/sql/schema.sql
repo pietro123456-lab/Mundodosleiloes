@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS inventory (
  created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE TABLE IF NOT EXISTS luck_state (
- player_id uuid PRIMARYPRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,
+ player_id uuid PRIMARY PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,
  multiplier integer NOT NULL DEFAULT 1,
  expires_at timestamptz,
  updated_at timestamptz NOT NULL DEFAULT now()
