@@ -38,3 +38,22 @@ Este é um **backend separado** da página estática do GitHub Pages. A criaçã
 - A abertura de baús usa uma tabela simplificada de itens e custos recebidos; integre com a economia e catálogo real do jogo antes do lançamento.
 - O sistema de leilões é uma base de lances; ainda falta liquidação/entrega do item quando o leilão encerra.
 - Não disponibilize o banco diretamente ao navegador. A API deve ser o único caminho de escrita.
+
+## Deploy com Render (arquivos já preparados)
+1. Crie uma base PostgreSQL gerenciada e copie sua URL de conexão.
+2. No Render, escolha **New → Blueprint** e selecione este repositório. O blueprint `server/render.yaml` define o serviço API com Docker.
+3. Configure as variáveis `DATABASE_URL`, `JWT_SECRET` (gerada pelo Render) e `CORS_ORIGIN` (URL pública do jogo).
+4. Execute o conteúdo de `sql/schema.sql` no banco antes de usar os endpoints.
+5. Acesse `/health` no endereço do serviço para verificar se está respondendo.
+
+### Criar o administrador inicial
+Depois de registrar uma conta, use SQL no painel do banco para promover **somente a sua própria conta**:
+```sql
+UPDATE players SET is_admin = true WHERE username = 'SEU_USUARIO';
+```
+Não deixe esse usuário ou senha de exemplo no repositório.
+
+## Cliente JS
+`client.js` é um helper de integração que expõe `window.MundoAPI` (login, cadastro, perfil, inventário, compra de sorte, baú, leilões e funções ADM). Antes de usar, defina `window.API_BASE` com a URL real do backend e carregue o arquivo. O site principal ainda não importa nem usa este helper; integração visual e migração de dados são próximas etapas.
+
+**Não coloque a connection string do banco nem `JWT_SECRET` no frontend.** Apenas a URL pública da API pode ser usada no navegador.
