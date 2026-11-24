@@ -213,8 +213,9 @@ begin
 end;
 $$;
 
-create or replace function public.admin_collect_player_item(p_target_user_id uuid,p_item_id text)
-returns text
+drop function if exists public.admin_collect_player_item(uuid,text);
+create function public.admin_collect_player_item(p_target_user_id uuid,p_item_id text)
+returns jsonb
 language plpgsql
 security definer
 set search_path = ''
@@ -232,11 +233,12 @@ begin
   select coalesce(state,jsonb_build_object('coins',1000,'items','[]'::jsonb,'wins',0,'level',1,'history','[]'::jsonb))
     into source_state from public.game_state where user_id=p_target_user_id;
   if source_state is null then raise exception 'O jogador ainda não tem progresso salvo.'; end if;
-  select value into picked from jsonb_array_elements(coalesce(source_state->'items','[]'::jsonb)) where value->>'id'=p_item_id limit 1;
+  select e.value into picked from jsonb_array_elements(coalesce(source_state->'items','[]'::jsonb)) as e(value)
+    where e.value->>'id'=p_item_id limit 1;
   if picked is null then raise exception 'Esse item não está mais no inventário do jogador.'; end if;
-  select coalesce(jsonb_agg(value),'[]'::jsonb) into remaining
-    from jsonb_array_elements(coalesce(source_state->'items','[]'::jsonb))
-    where value->>'id'<>p_item_id;
+  select coalesce(jsonb_agg(e.value),'[]'::jsonb) into remaining
+    from jsonb_array_elements(coalesce(source_state->'items','[]'::jsonb)) as e(value)
+    where e.value->>'id'<>p_item_id;
   source_state:=jsonb_set(source_state,'{items}',remaining,true);
   source_state:=jsonb_set(source_state,'{history}',jsonb_build_array('O item '||coalesce(picked->>'name','Item')||' foi transferido para o ADM.')||coalesce(source_state->'history','[]'::jsonb),true);
   select coalesce(state,jsonb_build_object('coins',1000,'items','[]'::jsonb,'wins',0,'level',1,'history','[]'::jsonb))
@@ -248,7 +250,7 @@ begin
   on conflict(user_id) do update set state=excluded.state,updated_at=excluded.updated_at;
   insert into public.game_state(user_id,state,updated_at) values(admin_id,admin_state,now())
   on conflict(user_id) do update set state=excluded.state,updated_at=excluded.updated_at;
-  return coalesce(picked->>'name','Item');
+  return jsonb_build_object('item_name',coalesce(picked->>'name','Item'),'state',admin_state);
 end;
 $$;
 
