@@ -13,6 +13,7 @@ Esta revisão foi feita lendo o código e os SQLs do repositório. Não houve ac
 1. `supabase/schema.sql`: restringe a permissão de UPDATE em `profiles` à coluna `username` para usuários autenticados.
 2. `supabase/migrations/20261125_security_hardening_stage1.sql`: migration segura e idempotente para aplicar a mesma restrição no projeto existente, além de consultas de diagnóstico.
 3. `SUPABASE_SETUP.md`: atualiza as instruções e deixa explícito o bloqueador restante.
+4. `index.html`: evita que uma atualização recebida pelo Realtime substitua alterações locais que ainda estão aguardando sincronização.
 
 A migration da etapa 1 não altera saldos, inventários, contas ou linhas de `game_state`.
 
