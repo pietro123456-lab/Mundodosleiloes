@@ -2,37 +2,51 @@
 
 Data da revisão: 25/11/2026
 
-## Escopo revisado
-- `index.html` (cliente web)
-- `supabase/admin_moderation.sql`
-- `supabase/migrations/20261125_admin_player_moderation.sql`
+## Resultado geral
 
-Esta revisão é estática: não houve acesso de execução ao projeto Supabase nem teste em navegador. Portanto, não representa certificação de segurança.
+<ins>Não está pronto para lançamento público.</ins> A revisão estática encontrou um bloqueador na economia: o frontend ainda salva o JSON completo do jogador diretamente em `public.game_state`. RLS limita a linha à própria conta, mas não impede que o próprio usuário envie um saldo ou inventário adulterado.
 
-## Pontos positivos observados
-- A autenticação usa Supabase Auth.
-- A interface consulta o perfil para exibir a área ADM.
-- A função `admin_manage_player` valida a permissão ADM no banco, impede auto-moderação e restringe o alvo a contas comuns.
+Esta revisão foi feita lendo o código e os SQLs do repositório. Não houve acesso ao painel Supabase, execução de consultas no projeto real, teste de navegador ou teste de concorrência. Portanto, não é certificação nem prova de que a configuração ativa corresponde aos arquivos versionados.
+
+## Melhorias aplicadas no repositório
+
+1. `supabase/schema.sql`: restringe a permissão de UPDATE em `profiles` à coluna `username` para usuários autenticados.
+2. `supabase/migrations/20261125_security_hardening_stage1.sql`: migration segura e idempotente para aplicar a mesma restrição no projeto existente, além de consultas de diagnóstico.
+3. `SUPABASE_SETUP.md`: atualiza as instruções e deixa explícito o bloqueador restante.
+
+A migration da etapa 1 não altera saldos, inventários, contas ou linhas de `game_state`.
+
+## Proteções já presentes no código
+
+- Supabase Auth identifica a conta.
+- A tabela `profiles` possui RLS.
+- As funções administrativas verificam `profiles.role = 'admin'` no banco.
+- A função de moderação impede que um ADM modifique a própria conta e restringe o alvo a jogadores comuns.
 - A tabela de snapshots de moderação tem RLS habilitado e acesso direto revogado para os papéis públicos.
-- O ranking usa uma função no servidor e filtra contas ocultadas.
-- O cliente não contém uma chave service_role; a chave publishable é apropriada para uso no navegador quando as políticas RLS estão corretas.
+- Funções de mercado e leilões fazem operações no banco e usam bloqueios de linha em partes importantes do fluxo.
+- A chave encontrada no frontend é publishable, não uma chave `service_role`.
 
-## Bloqueador crítico antes do lançamento
-O cliente carrega o JSON completo de `game_state`, altera moedas/itens no navegador e grava o estado inteiro com `upsert` diretamente na tabela. Isso significa que, mesmo que a política RLS limite cada pessoa à própria linha, a pessoa ainda pode tentar alterar os próprios valores de jogo por chamadas diretas à API ou pelo console do navegador.
+## Bloqueador crítico ainda aberto
 
-**Conclusão:** a RLS de propriedade da linha, sozinha, não protege a economia do jogo. A autoridade sobre moedas, itens, lances, recompensas e transferências precisa ficar no banco, por meio de funções RPC transacionais que validem cada operação. O cliente não deve poder enviar um JSON arbitrário com o saldo e o inventário finais.
+O cliente executa `upsert` direto em `game_state` com o objeto completo `data`. A política de UPDATE permite que cada usuário atualize sua própria linha. Assim, uma chamada autenticada direta pode tentar mudar moedas, itens, nível, XP e outros campos, sem passar pelas regras de negócio do jogo.
 
-## Próximas correções obrigatórias
-1. Revisar as políticas RLS reais de `profiles`, `game_state`, mercado, leilões e tabelas relacionadas.
-2. Migrar operações econômicas para RPCs seguras: abrir baú, vender item, receber renda AFK, bônus diário, comprar/anunciar item, dar lance, encerrar leilão e reivindicar recompensas.
-3. Revogar escrita direta do cliente em campos/linhas de estado econômico depois que todas as operações estiverem cobertas pelas RPCs.
-4. Garantir transações e bloqueios de linha para impedir saldo negativo, gasto duplicado, item duplicado e lances concorrentes.
-5. Adicionar limites de frequência e validação de valores no servidor.
-6. Testar com duas contas simultâneas, duas sessões da mesma conta, falhas de rede e tentativas de chamadas não autorizadas.
-7. Confirmar backup e procedimento de restauração antes de abrir o jogo ao público.
+**Não é seguro simplesmente revogar INSERT/UPDATE em `game_state` agora.** O frontend atual depende dessa gravação para persistir várias mecânicas; revogar sem substituir todas elas pode interromper o jogo e causar perda de progresso.
 
-## Não alterar nesta etapa
-Não foi aplicada uma restrição nova de escrita em `game_state`, porque isso poderia bloquear o salvamento atual e causar perda de progresso antes de migrar todas as ações para RPCs. A mudança deve ser feita junto com a migração completa da economia, não isoladamente.
+## Trabalho obrigatório para concluir a Parte 1
 
-## Resultado desta etapa
-Auditoria inicial concluída e bloqueador documentado. O jogo ainda não deve ser declarado pronto para lançamento até que a economia seja validada no servidor e as políticas RLS sejam revisadas e testadas.
+- [ ] Mapear cada ação que altera estado: abertura de baús, renda AFK, bônus diário, missões, conquistas, XP, inventário, venda, cofre, mascotes, eventos, baú global, leilões e ações ADM.
+- [ ] Criar RPC transacional no banco para cada ação econômica, calculando o resultado no servidor; não aceitar do cliente o saldo ou inventário final.
+- [ ] Migrar o frontend para chamar essas RPCs e atualizar a interface com o estado retornado.
+- [ ] Adicionar validação de limites, propriedade de item, preços, duração, saldo, idempotência e concorrência.
+- [ ] Só depois revogar INSERT/UPDATE direto em `game_state`.
+- [ ] Auditar grants e RLS de todas as tabelas adicionais.
+- [ ] Testar duas contas simultâneas, múltiplas sessões, repetição de requisições, falhas de rede e chamadas sem autorização.
+- [ ] Confirmar backup e procedimento de restauração antes de abrir o jogo ao público.
+
+## O que falta executar no Supabase
+
+A migration da etapa 1 foi adicionada ao GitHub, mas não foi executada no projeto Supabase porque não tenho acesso ao painel da conta. O responsável pelo projeto deve executá-la no SQL Editor e conferir as consultas de diagnóstico no próprio arquivo.
+
+## Critério de conclusão
+
+A Parte 1 só poderá ser marcada como concluída quando as operações econômicas estiverem validadas no servidor, a escrita arbitrária em `game_state` estiver bloqueada sem quebrar funcionalidades, as policies/grants tiverem sido auditadas no projeto ativo e os testes de abuso/concorrência tiverem passado.
