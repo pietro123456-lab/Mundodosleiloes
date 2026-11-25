@@ -181,8 +181,10 @@ begin
 end;
 $$;
 
-create or replace function public.admin_give_catalog_item(
-  p_target_user_id uuid, p_item_name text, p_item_emoji text, p_item_price bigint, p_item_rarity text
+drop function if exists public.admin_give_catalog_item(uuid,text,text,bigint,text);
+create function public.admin_give_catalog_item(
+  p_target_user_id uuid, p_item_name text, p_item_emoji text, p_item_price bigint, p_item_rarity text,
+  p_mutation text default 'Normal', p_mutation_multiplier numeric default 1
 )
 returns jsonb
 language plpgsql
@@ -195,8 +197,10 @@ begin
     raise exception 'Acesso negado: somente ADM.';
   end if;
   if p_target_user_id is null or p_item_name is null or length(trim(p_item_name))=0
-     or p_item_price is null or p_item_price < 0 or p_item_price > 9000000000000000 then
-    raise exception 'Jogador ou item inválido.';
+     or p_item_price is null or p_item_price < 0 or p_item_price > 9000000000000000
+     or p_mutation not in ('Normal','Brilhante','Dourada','Glitch','Arco-íris','Cósmica','Celestial','ADM')
+     or p_mutation_multiplier is null or p_mutation_multiplier < 1 or p_mutation_multiplier > 100000 then
+    raise exception 'Jogador, item ou mutação inválida.';
   end if;
   perform 1 from public.game_state where user_id=p_target_user_id for update;
   select coalesce(state, jsonb_build_object('coins',1000,'items','[]'::jsonb,'wins',0,'level',1,'history','[]'::jsonb))
@@ -204,14 +208,15 @@ begin
   if st is null then st:=jsonb_build_object('coins',1000,'items','[]'::jsonb,'wins',0,'level',1,'history','[]'::jsonb); end if;
   item_id := (extract(epoch from clock_timestamp())*1000000)::bigint + floor(random()*1000)::bigint;
   new_item := jsonb_build_object('id',item_id,'name',p_item_name,'emoji',coalesce(nullif(p_item_emoji,''),'🎁'),
-    'price',p_item_price,'rarity',coalesce(nullif(p_item_rarity,''),'Comum'),'mutation','Normal','mutationMultiplier',1);
+    'price',p_item_price,'rarity',coalesce(nullif(p_item_rarity,''),'Comum'),'mutation',p_mutation,'mutationMultiplier',p_mutation_multiplier);
   st := jsonb_set(st,'{items}',coalesce(st->'items','[]'::jsonb)||jsonb_build_array(new_item),true);
-  st := jsonb_set(st,'{history}',jsonb_build_array('ADM enviou o item '||p_item_name||' para sua coleção.')||coalesce(st->'history','[]'::jsonb),true);
+  st := jsonb_set(st,'{history}',jsonb_build_array('ADM enviou o item '||p_item_name||' ('||p_mutation||') para sua coleção.')||coalesce(st->'history','[]'::jsonb),true);
   insert into public.game_state(user_id,state,updated_at) values(p_target_user_id,st,now())
   on conflict(user_id) do update set state=excluded.state,updated_at=excluded.updated_at;
   return st;
 end;
 $$;
+grant execute on function public.admin_give_catalog_item(uuid,text,text,bigint,text,text,numeric) to authenticated;
 
 drop function if exists public.admin_collect_player_item(uuid,text);
 create function public.admin_collect_player_item(p_target_user_id uuid,p_item_id text)
