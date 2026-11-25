@@ -139,7 +139,12 @@ begin
  insert into public.world_auctions(week_key,title,item,highest_bid,ends_at)
  values(wk,'Relíquia da Semana',jsonb_build_object('id','world-'||wk,'emoji','🌌','name','Relíquia do Leilão Mundial','price',500000,'rarity','Mítico','mutation','Cósmica','mutationMultiplier',150),1000,finish)
  on conflict(week_key) do nothing;
- select w.id into aid from public.world_auctions w where w.week_key=wk;
+ select w.id into aid from public.world_auctions w
+ where w.highest_bidder=auth.uid() and not w.claimed and w.ends_at<=now()
+ order by w.ends_at desc limit 1;
+ if aid is null then
+  select w.id into aid from public.world_auctions w where w.week_key=wk;
+ end if;
  return query
  select w.id,w.title,w.item,w.ends_at,w.highest_bid,coalesce(p.username,'Nenhum lance'),
  case when w.highest_bidder=auth.uid() then w.highest_bid else 0 end,
@@ -184,14 +189,13 @@ end; $$;
 create or replace function public.world_auction_claim()
 returns jsonb language plpgsql security definer set search_path=''
 as $$
-declare wk text; a public.world_auctions%rowtype; st jsonb;
+declare a public.world_auctions%rowtype; st jsonb;
 begin
  if auth.uid() is null then raise exception 'Entre na sua conta.'; end if;
- wk:=to_char(date_trunc('week',now())-interval '1 week','IYYY-IW');
- select * into a from public.world_auctions where week_key=wk for update;
- if not found or a.highest_bidder<>auth.uid() then raise exception 'Você não venceu o leilão mundial anterior.'; end if;
- if now()<a.ends_at then raise exception 'O leilão ainda está em andamento.'; end if;
- if a.claimed then raise exception 'A recompensa já foi resgatada.'; end if;
+ select * into a from public.world_auctions
+ where highest_bidder=auth.uid() and not claimed and ends_at<=now()
+ order by ends_at desc limit 1 for update;
+ if not found then raise exception 'Não há recompensa de leilão mundial pendente para sua conta.'; end if;
  select state into st from public.game_state where user_id=auth.uid() for update;
  if st is null then raise exception 'Seu progresso não foi encontrado.'; end if;
  st:=jsonb_set(st,'{items}',coalesce(st->'items','[]'::jsonb)||jsonb_build_array(a.item),true);
