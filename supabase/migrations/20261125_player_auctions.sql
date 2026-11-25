@@ -67,7 +67,7 @@ begin
  perform public._settle_player_auctions();
  return query select a.id,a.item,p.username,a.starting_bid,a.highest_bid,coalesce(bp.username,'Nenhum lance'),a.ends_at,a.status,a.seller_user_id=auth.uid()
  from public.player_auctions a join public.profiles p on p.id=a.seller_user_id left join public.profiles bp on bp.id=a.highest_bidder
- where a.status='open' or a.seller_user_id=auth.uid() order by (a.status='open') desc,a.ends_at asc limit 150;
+ where a.status='open' order by a.ends_at asc limit 150;
 end; $$;
 
 create or replace function public.player_auction_bid(p_auction_id uuid,p_amount bigint)
