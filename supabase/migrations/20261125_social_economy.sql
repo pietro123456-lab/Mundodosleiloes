@@ -18,6 +18,16 @@ create table if not exists public.market_listings (
 create index if not exists market_listings_open_created on public.market_listings(status,created_at desc);
 alter table public.market_listings enable row level security;
 
+-- Atualizações de contas em tempo real: permite que uma venda ou lance feito
+-- em outro aparelho apareça sem esperar o próximo salvamento automático.
+do $
+begin
+ if exists(select 1 from pg_publication where pubname='supabase_realtime')
+    and not exists(select 1 from pg_publication_tables where pubname='supabase_realtime' and schemaname='public' and tablename='game_state') then
+  alter publication supabase_realtime add table public.game_state;
+ end if;
+end $;
+
 create or replace function public.market_listings_feed()
 returns table(id uuid,item jsonb,price bigint,seller_name text,created_at timestamptz)
 language plpgsql security definer set search_path=''
