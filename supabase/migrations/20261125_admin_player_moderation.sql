@@ -91,7 +91,7 @@ grant execute on function public.admin_manage_player(uuid, text) to authenticate
 
 -- Atualiza o ranking para ignorar contas ocultadas pela administração.
 create or replace function public.leaderboard_top_players()
-returns table(position bigint, user_id uuid, username text, coins bigint)
+returns table("position" bigint, user_id uuid, username text, coins bigint)
 language plpgsql
 security definer
 set search_path = ''
@@ -102,7 +102,7 @@ begin
   end if;
 
   return query
-    select ranked.position, ranked.user_id, ranked.username, ranked.coins
+    select ranked."position", ranked.user_id, ranked.username, ranked.coins
     from (
       select
         row_number() over (
