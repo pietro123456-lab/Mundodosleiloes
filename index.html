@@ -278,7 +278,7 @@ function renderIndex(){
  if(ownedEl)ownedEl.textContent=discovered+'/'+pool.length;
  if(percentEl)percentEl.textContent=percent+'%';
  const filters=document.getElementById('indexFilters');
- if(filters&&!filters.dataset.ready){filters.innerHTML=['Todos',...rarities].map(r=>'<button type="button" class="'+(r===indexRarity?'active':'')+'" onclick="setIndexRarity(\\''+r+'\\')">'+r+'</button>').join('');filters.dataset.ready='1';}
+ if(filters&&!filters.dataset.ready){filters.innerHTML=['Todos',...rarities].map(r=>'<button type="button" class="'+(r===indexRarity?'active':'')+'" onclick="setIndexRarity(&quot;'+r+'&quot;)">'+r+'</button>').join('');filters.dataset.ready='1';}
  else if(filters)filters.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.textContent===indexRarity));
  const term=(document.getElementById('indexSearch')?.value||'').trim().toLocaleLowerCase('pt-BR');
  const list=pool.filter(it=>(indexRarity==='Todos'||it[3]===indexRarity)&&(!term||it[1].toLocaleLowerCase('pt-BR').includes(term)));
