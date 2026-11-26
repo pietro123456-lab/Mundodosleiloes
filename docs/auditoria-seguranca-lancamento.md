@@ -51,3 +51,10 @@ A migration da etapa 1 foi adicionada ao GitHub, mas não foi executada no proje
 ## Critério de conclusão
 
 A Parte 1 só poderá ser marcada como concluída quando as operações econômicas estiverem validadas no servidor, a escrita arbitrária em `game_state` estiver bloqueada sem quebrar funcionalidades, as policies/grants tiverem sido auditadas no projeto ativo e os testes de abuso/concorrência tiverem passado.
+
+
+## Atualização da revisão — 25/11/2026
+
+Foi adicionada a migration `20261125_core_economy_transactions.sql` e o frontend passou a chamar RPCs transacionais para bônus diário e venda de itens. O schema completo também inclui essas funções.
+
+Isso reduz a confiança no cliente para essas duas operações, mas **não fecha o bloqueador crítico**: outras mecânicas ainda alteram o JSON local e o `syncNow()` ainda faz `upsert` direto da linha inteira de `game_state`. Portanto, a auditoria continua com resultado **não pronto para lançamento público**. A migration precisa ser executada no Supabase e as demais ações econômicas ainda precisam ser migradas e testadas antes de revogar escrita direta.
