@@ -109,3 +109,7 @@ Execute `supabase/migrations/20261125_block_custom_item_sales.sql` no SQL Editor
 
 ## Abertura de baús no servidor
 Execute `supabase/migrations/20261125_server_chest_opening.sql` no SQL Editor. O Supabase valida o baú, cobra o preço, verifica o baú grátis diário, aplica a sorte ativa, sorteia raridade/item/mutação e atualiza o saldo em uma transação. O navegador recebe o item sorteado para iniciar a animação do leilão fictício.
+
+
+## Leilões de baús validados no servidor
+Execute `supabase/migrations/20261126_server_auction_validation.sql` no SQL Editor depois da migration de abertura de baús. Ela cria os leilões no banco durante a abertura, valida cada lance e saldo, controla os lances dos bots pelo relógio do servidor, reserva as moedas do jogador, devolve a reserva quando o bot supera o lance e entrega o item somente no encerramento confirmado pelo banco. A interface não decide mais o vencedor.
