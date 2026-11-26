@@ -81,3 +81,7 @@ Foi adicionada a RPC `game_collect_afk_income()` na migration `20261125_server_a
 
 ## Atualização — compra de sorte
 A compra de multiplicadores agora usa `game_buy_luck(integer)`, que valida a lista permitida, determina o preço no servidor, bloqueia a linha do jogador e atualiza saldo e expiração em uma transação. Isso remove a confiança no preço e no relógio enviados pelo navegador para essa operação. A proteção geral ainda está incompleta enquanto `game_state` aceitar gravação direta e outras ações locais não forem migradas.
+
+
+## Atualização — venda de itens personalizados
+A RPC `game_sell_item` agora rejeita itens com raridade `Personalizado`, impedindo que o preço escolhido pelo cliente para itens criados localmente seja convertido em moedas pelo servidor. Isso reduz uma via direta de inflação, mas não substitui a migração de criação de itens e o bloqueio de escrita direta em `game_state`.
