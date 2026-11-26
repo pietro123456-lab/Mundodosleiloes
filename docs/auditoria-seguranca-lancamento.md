@@ -58,3 +58,10 @@ A Parte 1 só poderá ser marcada como concluída quando as operações econômi
 Foi adicionada a migration `20261125_core_economy_transactions.sql` e o frontend passou a chamar RPCs transacionais para bônus diário e venda de itens. O schema completo também inclui essas funções.
 
 Isso reduz a confiança no cliente para essas duas operações, mas **não fecha o bloqueador crítico**: outras mecânicas ainda alteram o JSON local e o `syncNow()` ainda faz `upsert` direto da linha inteira de `game_state`. Portanto, a auditoria continua com resultado **não pronto para lançamento público**. A migration precisa ser executada no Supabase e as demais ações econômicas ainda precisam ser migradas e testadas antes de revogar escrita direta.
+
+
+## Atualização — saldos grandes no ranking e ADM
+
+Foi criada a migration `20261125_large_balance_admin_ranking.sql`. Ela troca os casts de saldo do ranking para NUMERIC e devolve o saldo como texto, evitando overflow de BIGINT e preservando os dígitos no retorno JSON. A função administrativa de concessão de moedas também passa a calcular com NUMERIC e retornar texto. O frontend formata o saldo do ranking com BigInt.
+
+A migration ainda precisa ser executada no projeto Supabase. Esta alteração não elimina a vulnerabilidade de escrita direta em `game_state`; a auditoria geral continua **não pronta para lançamento público**.
