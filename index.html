@@ -306,23 +306,26 @@ auctionTimer=setInterval(function(){
 }
 function renderAuctionStatus(){
  if(!auction)return;
- const p=document.getElementById('auctionPlayer'),b=document.getElementById('auctionBot'),h=document.getElementById('auctionHighest'),m=document.getElementById('auctionMin'),hist=document.getElementById('auctionHistory'),input=document.getElementById('auctionBidInput');
+ const p=document.getElementById('auctionPlayer'),b=document.getElementById('auctionBot'),h=document.getElementById('auctionHighest'),m=document.getElementById('auctionMin'),hist=document.getElementById('auctionHistory'),input=document.getElementById('auctionBidInput'),button=document.getElementById('auctionBidButton');
  if(p)p.textContent=auction.playerBid.toLocaleString('pt-BR');
  if(b)b.textContent=auction.botBid.toLocaleString('pt-BR');
  if(h)h.textContent='🪙 '+Math.max(auction.playerBid,auction.botBid).toLocaleString('pt-BR');
- const min=Math.max(100,auction.playerBid,auction.botBid)+100;
+ const min=Math.max(100,auction.botBid)+100;
  if(m)m.textContent=min.toLocaleString('pt-BR');
- if(input){input.min=min;input.value=min}
- if(hist)hist.innerHTML=auction.history.length?auction.history.slice(0,5).map(x=>'<div style="padding:5px 0;border-bottom:1px solid #302b43">'+escapeHtml(x)+'</div>').join(''):'Ainda não houve lances.';
+ if(input){input.min=min;if(Number(input.value)<min)input.value=min}
+ const canBid=auction.botBid>auction.playerBid&&min<=data.coins&&auction.seconds>0;
+ if(button){button.disabled=!canBid;button.textContent=auction.botBid>auction.playerBid?'🔨 Cobrir lance':'⏳ Aguarde o lance do bot';button.style.opacity=canBid?'1':'.55'}
+ if(hist)hist.innerHTML=auction.history.length?auction.history.slice(0,5).map(x=>'<div style="padding:5px 0;border-bottom:1px solid #302b43">'+escapeHtml(x)+'</div>').join(''):'Aguardando o primeiro lance do bot.';
 }
 function bidAuction(){
  if(!auction)return;
+ if(auction.botBid<=auction.playerBid){alert('Você só pode dar lance quando o bot estiver na frente.');return}
  const input=document.getElementById('auctionBidInput');
- const min=Math.max(100,auction.playerBid,auction.botBid)+100;
+ const min=Math.max(100,auction.botBid)+100;
  const amount=Math.floor(Number(input?.value));
- if(!Number.isFinite(amount)||amount<min){alert('O lance mínimo é '+min.toLocaleString('pt-BR')+' moedas.');return}
+ if(!Number.isSafeInteger(amount)||amount<min){alert('Para cobrir o bot, o lance mínimo é '+min.toLocaleString('pt-BR')+' moedas.');return}
  if(amount>data.coins){alert('Você não tem moedas fictícias suficientes para esse lance.');return}
- auction.playerBid=amount;auction.history.unshift('Você · 🪙 '+amount.toLocaleString('pt-BR'));renderAuctionStatus();
+ auction.playerBid=amount;auction.history.unshift('Você cobriu o bot · 🪙 '+amount.toLocaleString('pt-BR'));renderAuctionStatus();
 }
 function finishAuction(forceBot=false){
  if(!auction)return;
