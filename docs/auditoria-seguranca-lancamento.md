@@ -65,3 +65,10 @@ Isso reduz a confiança no cliente para essas duas operações, mas **não fecha
 Foi criada a migration `20261125_large_balance_admin_ranking.sql`. Ela troca os casts de saldo do ranking para NUMERIC e devolve o saldo como texto, evitando overflow de BIGINT e preservando os dígitos no retorno JSON. A função administrativa de concessão de moedas também passa a calcular com NUMERIC e retornar texto. O frontend formata o saldo do ranking com BigInt.
 
 A migration ainda precisa ser executada no projeto Supabase. Esta alteração não elimina a vulnerabilidade de escrita direta em `game_state`; a auditoria geral continua **não pronta para lançamento público**.
+
+
+## Atualização — recompensas de missões e conquistas
+
+Foi adicionada a RPC `game_claim_progress_reward(p_kind,p_reward_id)` na migration `20261125_server_progress_rewards.sql`. Ela calcula os requisitos usando o estado armazenado, fixa valores de recompensa no servidor, bloqueia a linha do jogador e impede resgates duplicados. O frontend agora chama essa RPC para missões e conquistas.
+
+A migration precisa ser executada no Supabase. O progresso geral ainda depende de gravação direta do JSON em `game_state`; portanto a economia como um todo continua sem proteção completa contra adulteração e não está pronta para lançamento público.
