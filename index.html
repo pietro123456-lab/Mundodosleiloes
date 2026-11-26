@@ -291,6 +291,7 @@ card.innerHTML=`
 modal.appendChild(card);document.body.appendChild(modal);
 document.getElementById('auctionBidButton').addEventListener('click',bidAuction);
 document.getElementById('auctionPassButton').addEventListener('click',()=>finishAuction(true));
+renderAuctionStatus();
 auctionTimer=setInterval(function(){
  if(!auction)return;
  auction.seconds--;
