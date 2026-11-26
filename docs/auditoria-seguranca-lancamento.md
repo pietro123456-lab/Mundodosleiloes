@@ -93,3 +93,7 @@ A RPC `game_open_chest(text)` valida baú/preço/saldo, controla a abertura grá
 
 ## Atualização — validação de leilões de baús
 A migration `20261126_server_auction_validation.sql` cria `game_auctions` sem acesso direto do cliente e adiciona RPCs autenticadas para atualizar o relógio/lances do bot, registrar lance do jogador e encerrar a disputa. O banco verifica propriedade, estado, prazo, liderança do bot, incremento mínimo e saldo; reserva o lance, reembolsa quando o bot supera e só entrega item/XP no encerramento validado. A UI apenas apresenta os dados retornados pelo servidor. Observação: a tabela `game_state` ainda permite escrita direta, então outras partes do jogo continuam exigindo migração antes de uma declaração de segurança global.
+
+
+## Atualização — bloqueio de gravações diretas em game_state
+Foi adicionada a migration `20261126_lock_client_game_state_writes.sql`. Ela revoga INSERT/UPDATE de `authenticated` em `game_state` e inclui trigger de defesa em profundidade que impede alteração do estado por sessões autenticadas. As funções `SECURITY DEFINER` do jogo continuam sendo o caminho de escrita. O frontend foi ajustado para não fazer mais upsert do JSON completo. A migration ainda precisa ser executada no Supabase e os fluxos do jogo precisam ser testados após a mudança; não há certificação de lançamento neste momento.
