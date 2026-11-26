@@ -548,7 +548,160 @@ begin
   limit 1;
   if v_item is null then raise exception 'Esse item não está mais no inventário.'; end if;
 
-  if coalesce(v_item->>'price','') !~ '^[0-9]+([.][0-9]+)?$' then
+  if coalesce(v_item->>'rarity','') = 'Personalizado' then
+    raise exception 'Itens personalizados não podem ser vendidos por moedas.';
+  end if;
+
+  if coalesce(v_item->>'price','') !~ '^[0-9]+([.][0-9]+)?
+    raise exception 'O preço deste item é inválido.';
+  end if;
+  v_price := (v_item->>'price')::numeric;
+  if v_price < 0 or v_price > 9000000000000000 then raise exception 'Preço fora do limite.'; end if;
+  v_gain := floor(v_price * 0.7)::bigint;
+
+  select coalesce(jsonb_agg(e.value),'[]'::jsonb) into v_remaining
+  from jsonb_array_elements(v_items) e(value)
+  where e.value->>'id' <> p_item_id;
+
+  v_coins := greatest(0,coalesce(nullif(v_state->>'coins','')::numeric,1000)) + v_gain;
+  if v_coins > 999999999999999999999999999999 then raise exception 'Saldo máximo excedido.'; end if;
+
+  v_state := jsonb_set(v_state,'{items}',v_remaining,true);
+  v_state := jsonb_set(v_state,'{coins}',to_jsonb(v_coins),true);
+  v_state := jsonb_set(v_state,'{history}',jsonb_build_array('Vendeu '||coalesce(v_item->>'name','Item')||' por '||v_gain::text||' moedas.') || coalesce(v_state->'history','[]'::jsonb),true);
+
+  update public.game_state set state=v_state, updated_at=now() where user_id=v_uid;
+  return v_state;
+end;
+$$;
+
+revoke all on function public.game_claim_daily_bonus() from public, anon;
+revoke all on function public.game_sell_item(text) from public, anon;
+grant execute on function public.game_claim_daily_bonus() to authenticated;
+grant execute on function public.game_sell_item(text) to authenticated;
+
+
+
+-- Recompensas de missões e conquistas calculadas no servidor.
+create or replace function public.game_claim_progress_reward(p_kind text,p_reward_id text)
+returns jsonb language plpgsql security definer set search_path=''
+as $$
+declare
+ v_uid uuid:=auth.uid(); v_state jsonb; v_progress jsonb; v_items jsonb; v_claimed jsonb;
+ v_today text:=to_char(timezone('utc',now())::date,'YYYY-MM-DD');
+ v_coins numeric; v_xp numeric; v_reward numeric; v_reward_xp numeric; v_label text; v_metric numeric:=0; v_required numeric;
+begin
+ if v_uid is null then raise exception 'É necessário entrar na conta.'; end if;
+ if p_kind not in ('mission','achievement') then raise exception 'Tipo de recompensa inválido.'; end if;
+ select state into v_state from public.game_state where user_id=v_uid for update;
+ if not found then raise exception 'Progresso não encontrado.'; end if;
+ v_progress:=coalesce(v_state->'progress','{}'::jsonb); v_items:=coalesce(v_state->'items','[]'::jsonb);
+ if jsonb_typeof(v_items)<>'array' then raise exception 'Inventário inválido.'; end if;
+ if p_kind='mission' then
+  if coalesce(v_progress->>'missionDate','')<>v_today then v_progress:=jsonb_set(v_progress,'{missionDate}',to_jsonb(v_today),true); v_progress:=jsonb_set(v_progress,'{claimedMissions}','[]'::jsonb,true); end if;
+  v_claimed:=coalesce(v_progress->'claimedMissions','[]'::jsonb);
+  case p_reward_id
+   when 'open' then v_reward:=350;v_reward_xp:=25;v_required:=1;v_metric:=coalesce(nullif(v_state->>'wins','')::numeric,0);v_label:='Missão concluída: Explorador';
+   when 'collect' then v_reward:=250;v_reward_xp:=20;v_required:=3;v_metric:=jsonb_array_length(v_items);v_label:='Missão concluída: Colecionador';
+   when 'rare' then v_reward:=500;v_reward_xp:=35;v_required:=1;select count(*) into v_metric from jsonb_array_elements(v_items) x where coalesce(x->>'rarity','') in ('Raro','Épico','Lendário','Mítico','Divino','Celestial','Transcendente','Secreto','Eterno','Icônico','Primordial','Infinito');v_label:='Missão concluída: Olho para raridades';
+   else raise exception 'Missão desconhecida.';
+  end case;
+ else
+  v_claimed:=coalesce(v_progress->'claimedAchievements','[]'::jsonb);
+  case p_reward_id
+   when 'first_win' then v_reward:=300;v_reward_xp:=20;v_required:=1;v_metric:=coalesce(nullif(v_state->>'wins','')::numeric,0);v_label:='Conquista: Primeiro martelo';
+   when 'wins_10' then v_reward:=2500;v_reward_xp:=100;v_required:=10;v_metric:=coalesce(nullif(v_state->>'wins','')::numeric,0);v_label:='Conquista: Leiloeiro experiente';
+   when 'items_10' then v_reward:=1200;v_reward_xp:=60;v_required:=10;v_metric:=jsonb_array_length(v_items);v_label:='Conquista: Coleção em crescimento';
+   when 'items_50' then v_reward:=8000;v_reward_xp:=250;v_required:=50;v_metric:=jsonb_array_length(v_items);v_label:='Conquista: Grande colecionador';
+   when 'mutations_3' then v_reward:=3000;v_reward_xp:=120;v_required:=3;select count(distinct coalesce(x->>'mutation','Normal')) into v_metric from jsonb_array_elements(v_items) x;v_label:='Conquista: Caçador de mutações';
+   when 'rarity_divine' then v_reward:=5000;v_reward_xp:=180;v_required:=1;select count(*) into v_metric from jsonb_array_elements(v_items) x where coalesce(x->>'rarity','') in ('Divino','Celestial','Transcendente','Secreto','Eterno','Icônico','Primordial','Infinito');v_label:='Conquista: Toque divino';
+   when 'market_sale' then v_reward:=1200;v_reward_xp:=60;v_required:=1;v_metric:=coalesce(nullif(v_state->>'marketSales','')::numeric,0);v_label:='Conquista: Mercador do Reino';
+   when 'event_claim' then v_reward:=1500;v_reward_xp:=70;v_required:=1;v_metric:=coalesce(nullif(v_state->>'eventClaims','')::numeric,0);v_label:='Conquista: Presença no Festival';
+   when 'level_10' then v_reward:=10000;v_reward_xp:=300;v_required:=10;v_metric:=coalesce(nullif(v_state->>'level','')::numeric,1);v_label:='Conquista: Lenda do Reino';
+   else raise exception 'Conquista desconhecida.';
+  end case;
+ end if;
+ if v_claimed @> jsonb_build_array(p_reward_id) then raise exception 'Esta recompensa já foi resgatada.'; end if;
+ if v_metric<v_required then raise exception 'Você ainda não concluiu este objetivo.'; end if;
+ v_coins:=coalesce(nullif(v_state->>'coins','')::numeric,1000)+v_reward;
+ if v_coins>999999999999999999999999999999 then raise exception 'Saldo máximo excedido.'; end if;
+ v_xp:=coalesce(nullif(v_progress->>'xp','')::numeric,0)+v_reward_xp;
+ v_claimed:=v_claimed||jsonb_build_array(p_reward_id);
+ if p_kind='mission' then v_progress:=jsonb_set(v_progress,'{claimedMissions}',v_claimed,true); else v_progress:=jsonb_set(v_progress,'{claimedAchievements}',v_claimed,true); end if;
+ v_progress:=jsonb_set(v_progress,'{xp}',to_jsonb(v_xp),true);
+ v_state:=jsonb_set(v_state,'{coins}',to_jsonb(v_coins),true);v_state:=jsonb_set(v_state,'{progress}',v_progress,true);
+ v_state:=jsonb_set(v_state,'{level}',to_jsonb(greatest(1,1+floor(v_xp/250)::bigint)),true);
+ v_state:=jsonb_set(v_state,'{history}',jsonb_build_array(v_label||' · +'||v_reward::text||' moedas · +'||v_reward_xp::text||' XP')||coalesce(v_state->'history','[]'::jsonb),true);
+ update public.game_state set state=v_state,updated_at=now() where user_id=v_uid; return v_state;
+end; $$;
+revoke all on function public.game_claim_progress_reward(text,text) from public,anon;
+grant execute on function public.game_claim_progress_reward(text,text) to authenticated;
+
+
+-- Renda AFK calculada pelo relógio do servidor.
+create or replace function public.game_collect_afk_income()
+returns jsonb language plpgsql security definer set search_path = '' as $$
+declare
+  v_uid uuid := auth.uid(); v_state jsonb; v_now timestamptz := clock_timestamp();
+  v_last_ms numeric; v_elapsed numeric := 0; v_rate numeric := 0; v_earned numeric := 0;
+  v_item jsonb; v_rarity text; v_multiplier numeric;
+begin
+  if v_uid is null then raise exception 'É necessário entrar na conta.'; end if;
+  select coalesce(state,'{}'::jsonb) into v_state from public.game_state where user_id=v_uid for update;
+  if not found then v_state:=jsonb_build_object('coins',1000,'items','[]'::jsonb,'wins',0,'level',1,'history',jsonb_build_array('Bem-vindo! Você recebeu 1.000 moedas iniciais.')); end if;
+  if coalesce(jsonb_typeof(v_state->'items'),'')<>'array' then v_state:=jsonb_set(v_state,'{items}','[]'::jsonb,true); end if;
+  if coalesce(v_state->>'lastIncomeAt','') ~ '^[0-9]+([.][0-9]+)?$' then
+    v_last_ms:=(v_state->>'lastIncomeAt')::numeric;
+    v_elapsed:=greatest(0,least(43200,extract(epoch from v_now)-(v_last_ms/1000)));
+  end if;
+  for v_item in select value from jsonb_array_elements(v_state->'items') loop
+    v_rarity:=coalesce(v_item->>'rarity','Comum');
+    v_multiplier:=case when coalesce(v_item->>'mutationMultiplier','') ~ '^[0-9]+([.][0-9]+)?$' then greatest(1,least(100000,(v_item->>'mutationMultiplier')::numeric)) else 1 end;
+    v_rate:=v_rate+(case v_rarity when 'Comum' then 2 when 'Incomum' then 8 when 'Raro' then 35 when 'Épico' then 120 when 'Lendário' then 500 when 'Mítico' then 1800 when 'Divino' then 6500 when 'Celestial' then 25000 when 'Transcendente' then 100000 when 'Secreto' then 500000 when 'Eterno' then 2500000 when 'Icônico' then 12000000 when 'Primordial' then 60000000 when 'Infinito' then 300000000 else 0 end)*v_multiplier;
+  end loop;
+  v_earned:=floor(v_rate*v_elapsed);
+  v_state:=jsonb_set(v_state,'{coins}',to_jsonb(coalesce(nullif(v_state->>'coins','')::numeric,1000)+v_earned),true);
+  v_state:=jsonb_set(v_state,'{lastIncomeAt}',to_jsonb(floor(extract(epoch from v_now)*1000)),true);
+  if v_earned>0 then v_state:=jsonb_set(v_state,'{history}',jsonb_build_array('Renda AFK: +'||v_earned::text||' moedas.')||coalesce(v_state->'history','[]'::jsonb),true); end if;
+  insert into public.game_state(user_id,state,updated_at) values(v_uid,v_state,v_now) on conflict(user_id) do update set state=excluded.state,updated_at=excluded.updated_at;
+  return jsonb_build_object('state',v_state,'earned',v_earned::text);
+end; $$;
+revoke all on function public.game_collect_afk_income() from public,anon;
+grant execute on function public.game_collect_afk_income() to authenticated;
+
+
+-- Compra de multiplicador de sorte processada no servidor.
+create or replace function public.game_buy_luck(p_multiplier integer)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+ v_uid uuid:=auth.uid(); v_state jsonb; v_now timestamptz:=clock_timestamp();
+ v_price numeric; v_coins numeric; v_old_expiry numeric:=0; v_expiry numeric;
+begin
+ if v_uid is null then raise exception 'É necessário entrar na conta.'; end if;
+ v_price:=case p_multiplier when 2 then 5000 when 4 then 20000 when 6 then 60000 when 8 then 150000 when 10 then 500000 when 12 then 1500000 when 14 then 5000000 when 16 then 15000000 when 18 then 50000000 when 20 then 150000000 else null end;
+ if v_price is null then raise exception 'Multiplicador inválido.'; end if;
+ select coalesce(state,'{}'::jsonb) into v_state from public.game_state where user_id=v_uid for update;
+ if not found then raise exception 'Progresso não encontrado.'; end if;
+ v_coins:=coalesce(nullif(v_state->>'coins','')::numeric,0);
+ if v_coins<v_price then raise exception 'Moedas insuficientes.'; end if;
+ if coalesce(v_state#>>'{luck,expires}','') ~ '^[0-9]+([.][0-9]+)?$' then
+   v_old_expiry:=(v_state#>>'{luck,expires}')::numeric;
+ end if;
+ v_expiry:=greatest(floor(extract(epoch from v_now)*1000),v_old_expiry)+900000;
+ v_state:=jsonb_set(v_state,'{coins}',to_jsonb(v_coins-v_price),true);
+ v_state:=jsonb_set(v_state,'{luck}',jsonb_build_object('multiplier',p_multiplier,'expires',v_expiry),true);
+ v_state:=jsonb_set(v_state,'{history}',jsonb_build_array('Comprou sorte '||p_multiplier::text||'x por 15 minutos.')||coalesce(v_state->'history','[]'::jsonb),true);
+ update public.game_state set state=v_state,updated_at=v_now where user_id=v_uid;
+ return v_state;
+end;
+$$;
+revoke all on function public.game_buy_luck(integer) from public,anon;
+grant execute on function public.game_buy_luck(integer) to authenticated;
+ then
     raise exception 'O preço deste item é inválido.';
   end if;
   v_price := (v_item->>'price')::numeric;
