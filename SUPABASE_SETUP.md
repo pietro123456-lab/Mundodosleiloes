@@ -72,3 +72,13 @@ A renda AFK é calculada pelo próprio jogo ao entrar novamente: soma a produç�
 4. Execute separadamente as duas consultas de diagnóstico no final do arquivo e confira os resultados.
 
 Esta etapa protege os campos de perfil, mas **não conclui a segurança da economia**. A próxima etapa deve migrar as operações do jogo para o servidor antes de bloquear a escrita direta em `game_state`.
+
+
+## Atualização — transações do bônus diário e venda de itens
+
+A migration `supabase/migrations/20261125_core_economy_transactions.sql` adiciona duas operações executadas no servidor:
+
+- `game_claim_daily_bonus()`: concede o bônus uma única vez por dia UTC, com bloqueio da linha do jogador e atualização atômica de moedas/XP.
+- `game_sell_item(p_item_id)`: confere se o item pertence ao jogador, calcula 70% do preço armazenado e remove o item e credita as moedas na mesma transação.
+
+**Ação necessária:** execute o arquivo da migration no SQL Editor do Supabase antes de usar a versão atualizada do site. Essas duas ações já foram ligadas ao frontend. Isso é uma etapa parcial: a escrita direta em `game_state` permanece habilitada até migrar todas as demais mecânicas.
