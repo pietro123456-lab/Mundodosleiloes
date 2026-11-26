@@ -85,3 +85,7 @@ A compra de multiplicadores agora usa `game_buy_luck(integer)`, que valida a lis
 
 ## Atualização — venda de itens personalizados
 A RPC `game_sell_item` agora rejeita itens com raridade `Personalizado`, impedindo que o preço escolhido pelo cliente para itens criados localmente seja convertido em moedas pelo servidor. Isso reduz uma via direta de inflação, mas não substitui a migração de criação de itens e o bloqueio de escrita direta em `game_state`.
+
+
+## Atualização — abertura de baús
+A RPC `game_open_chest(text)` valida baú/preço/saldo, controla a abertura grátis diária por data UTC, aplica o multiplicador de sorte ativo e sorteia item/raridade/mutação no banco, atualizando o estado sob bloqueio de linha. A interface inicia a simulação do leilão com o item retornado. O encerramento do leilão fictício e os lances contra bots ainda são processados no navegador, e `game_state` ainda aceita gravação direta; portanto, esta etapa não elimina a possibilidade de adulteração dessas partes.
