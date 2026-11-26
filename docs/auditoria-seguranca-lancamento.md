@@ -72,3 +72,8 @@ A migration ainda precisa ser executada no projeto Supabase. Esta alteração n�
 Foi adicionada a RPC `game_claim_progress_reward(p_kind,p_reward_id)` na migration `20261125_server_progress_rewards.sql`. Ela calcula os requisitos usando o estado armazenado, fixa valores de recompensa no servidor, bloqueia a linha do jogador e impede resgates duplicados. O frontend agora chama essa RPC para missões e conquistas.
 
 A migration precisa ser executada no Supabase. O progresso geral ainda depende de gravação direta do JSON em `game_state`; portanto a economia como um todo continua sem proteção completa contra adulteração e não está pronta para lançamento público.
+
+
+## Atualização — renda AFK
+
+Foi adicionada a RPC `game_collect_afk_income()` na migration `20261125_server_afk_income.sql`. O cálculo do tempo usa o relógio do banco, limita o acúmulo a 12 horas, calcula a taxa com base nos itens da linha bloqueada e grava o resultado em uma transação. O frontend chama a RPC ao entrar e a cada 15 segundos, em vez de creditar moedas pelo relógio local. A migration ainda precisa ser executada no Supabase. Como a escrita direta em `game_state` continua liberada para o cliente e outras operações (especialmente abertura de baús/leilões contra bots e compras de sorte) ainda são locais, isso não fecha o bloqueador de adulteração nem autoriza lançamento público.
