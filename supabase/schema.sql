@@ -93,14 +93,14 @@ end;
 $$;
 
 create or replace function public.admin_grant_coins(p_target_user_id uuid, p_amount bigint)
-returns bigint
+returns text
 language plpgsql
 security definer
 set search_path = ''
 as $$
 declare
   current_state jsonb;
-  new_balance bigint;
+  new_balance numeric;
   target_name text;
 begin
   if not exists (
@@ -130,8 +130,8 @@ begin
     );
   end if;
 
-  new_balance := coalesce((current_state ->> 'coins')::bigint, 1000) + p_amount;
-  if new_balance > 9000000000000000 then
+  new_balance := coalesce(nullif(current_state ->> 'coins','')::numeric, 1000) + p_amount;
+  if new_balance > 999999999999999999999999999999 then
     raise exception 'O saldo ultrapassaria o limite permitido.';
   end if;
 
@@ -151,7 +151,7 @@ begin
   on conflict (user_id) do update
     set state = excluded.state, updated_at = excluded.updated_at;
 
-  return new_balance;
+  return new_balance::text;
 end;
 $$;
 
@@ -274,7 +274,7 @@ grant execute on function public.admin_collect_player_item(uuid,text) to authent
 -- Ranking global: somente usuários autenticados podem consultar.
 -- A função lê os estados de todos os jogadores sem abrir acesso direto às tabelas.
 create or replace function public.leaderboard_top_players()
-returns table("position" bigint, user_id uuid, username text, coins bigint)
+returns table("position" bigint, user_id uuid, username text, coins text)
 language plpgsql
 security definer
 set search_path = ''
@@ -289,7 +289,7 @@ begin
     from (
       select
         row_number() over (
-          order by coalesce(nullif(gs.state ->> 'coins', '')::bigint, 1000) desc,
+          order by coalesce(nullif(gs.state ->> 'coins', '')::numeric, 1000) desc,
                    lower(p.username)
         ) as position,
         p.id as user_id,
