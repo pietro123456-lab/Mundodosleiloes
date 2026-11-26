@@ -117,3 +117,7 @@ Execute `supabase/migrations/20261126_server_auction_validation.sql` no SQL Edit
 
 ## Bloqueio de gravação direta do progresso
 Execute `supabase/migrations/20261126_lock_client_game_state_writes.sql` no SQL Editor. Ela remove INSERT/UPDATE direto de `game_state` para usuários autenticados e adiciona uma proteção de trigger contra gravações diretas. As funções `SECURITY DEFINER` do jogo continuam podendo atualizar o estado. O frontend foi ajustado para não tentar enviar o JSON inteiro do jogador.
+
+
+### Correção adicional de privilégios de game_state
+A consulta de verificação mostrou que ainda existiam privilégios DELETE, REFERENCES, TRIGGER e TRUNCATE. Execute também `supabase/migrations/20261126_revoke_all_game_state_client_privileges.sql`. Ela revoga todos os privilégios de tabela de `PUBLIC`, `anon` e `authenticated`, concedendo apenas SELECT a `authenticated`. O resultado esperado da consulta é: apenas uma linha `authenticated | SELECT`; nenhuma linha para `anon` ou `PUBLIC`.
