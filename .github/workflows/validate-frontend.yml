@@ -1,0 +1,54 @@
+name: Validar frontend
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  javascript:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verificar sintaxe dos scripts inline
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+
+          class Scripts(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.current = None
+                  self.parts = []
+                  self.scripts = []
+              def handle_starttag(self, tag, attrs):
+                  if tag.lower() == "script":
+                      attrs = dict(attrs)
+                      if "src" not in attrs and attrs.get("type", "text/javascript") in ("text/javascript", "application/javascript", "module"):
+                          self.current = []
+              def handle_data(self, data):
+                  if self.current is not None:
+                      self.current.append(data)
+              def handle_endtag(self, tag):
+                  if tag.lower() == "script" and self.current is not None:
+                      self.scripts.append("".join(self.current))
+                      self.current = None
+
+          parser = Scripts()
+          parser.feed(Path("index.html").read_text(encoding="utf-8"))
+          if not parser.scripts:
+              raise SystemExit("Nenhum script JavaScript inline encontrado.")
+          for i, source in enumerate(parser.scripts):
+              Path(f"/tmp/inline-{i}.js").write_text(source, encoding="utf-8")
+          print(f"{len(parser.scripts)} script(s) encontrado(s).")
+          PY
+          for file in /tmp/inline-*.js; do
+            echo "Verificando $file"
+            node --check "$file"
+          done
