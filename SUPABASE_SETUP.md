@@ -113,3 +113,7 @@ Execute `supabase/migrations/20261125_server_chest_opening.sql` no SQL Editor. O
 
 ## Leilões de baús validados no servidor
 Execute `supabase/migrations/20261126_server_auction_validation.sql` no SQL Editor depois da migration de abertura de baús. Ela cria os leilões no banco durante a abertura, valida cada lance e saldo, controla os lances dos bots pelo relógio do servidor, reserva as moedas do jogador, devolve a reserva quando o bot supera o lance e entrega o item somente no encerramento confirmado pelo banco. A interface não decide mais o vencedor.
+
+
+## Bloqueio de gravação direta do progresso
+Execute `supabase/migrations/20261126_lock_client_game_state_writes.sql` no SQL Editor. Ela remove INSERT/UPDATE direto de `game_state` para usuários autenticados e adiciona uma proteção de trigger contra gravações diretas. As funções `SECURITY DEFINER` do jogo continuam podendo atualizar o estado. O frontend foi ajustado para não tentar enviar o JSON inteiro do jogador.
