@@ -105,3 +105,7 @@ Execute `supabase/migrations/20261125_server_luck_purchase.sql` no SQL Editor. A
 
 ## Bloqueio de venda de itens personalizados
 Execute `supabase/migrations/20261125_block_custom_item_sales.sql` no SQL Editor. Itens personalizados não geram moedas ao serem vendidos; isso evita que um preço escolhido no navegador seja convertido em saldo.
+
+
+## Abertura de baús no servidor
+Execute `supabase/migrations/20261125_server_chest_opening.sql` no SQL Editor. O Supabase valida o baú, cobra o preço, verifica o baú grátis diário, aplica a sorte ativa, sorteia raridade/item/mutação e atualiza o saldo em uma transação. O navegador recebe o item sorteado para iniciar a animação do leilão fictício.
