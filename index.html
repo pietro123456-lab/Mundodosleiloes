@@ -263,46 +263,45 @@ async function adminCollectPlayerItem(){
  if(result?.state&&data){data={...data,...result.state};save();render()}
  admPlayerItem.innerHTML='<option value="">Inventário atualizado — carregue novamente</option>';
 }
-function populateLuckAdmin(){if(!isAdminOwner())return;admLuckTarget.innerHTML='<option value="GLOBAL">Global (este navegador)</option>'+Object.entries(users()).map(([k,u])=>'<option value="'+k+'">Jogador: '+u.name+'</option>').join('');admLuckMultiplier.innerHTML=luckMultipliers.map(m=>'<option value="'+m+'">'+m+'x</option>').join('')} let auction=null,auctionTimer=null;async function openChest(){const button=document.querySelector('[onclick="openChest()"]');if(button)button.disabled=true;try{const {data:result,error}=await sb.rpc('game_open_chest',{p_chest:chest});if(error)throw error;if(!result?.state||!result?.item)throw new Error('O servidor não retornou o resultado do baú.');data={...defaultGameState(),...result.state};save();render();startAuction(result.item)}catch(error){alert(error.message==='Seu baú grátis de hoje já foi usado!'||error.message==='Moedas insuficientes!'?error.message:'Não foi possível abrir o baú: '+error.message)}finally{if(button)button.disabled=false}}
-function startAuction(item){
+function populateLuckAdmin(){if(!isAdminOwner())return;admLuckTarget.innerHTML='<option value="GLOBAL">Global (este navegador)</option>'+Object.entries(users()).map(([k,u])=>'<option value="'+k+'">Jogador: '+u.name+'</option>').join('');admLuckMultiplier.innerHTML=luckMultipliers.map(m=>'<option value="'+m+'">'+m+'x</option>').join('')} let auction=null,auctionTimer=null;async function openChest(){const button=document.querySelector('[onclick="openChest()"]');if(button)button.disabled=true;try{const {data:result,error}=await sb.rpc('game_open_chest',{p_chest:chest});if(error)throw error;if(!result?.state||!result?.item)throw new Error('O servidor não retornou o resultado do baú.');data={...defaultGameState(),...result.state};save();render();startAuction(result.item,result.auctionId,result.botName)}catch(error){alert(error.message==='Seu baú grátis de hoje já foi usado!'||error.message==='Moedas insuficientes!'?error.message:'Não foi possível abrir o baú: '+error.message)}finally{if(button)button.disabled=false}}
+function startAuction(item,auctionId,botName){
 const botNames=['Ana Monteiro','Heitor Lima','Luna Prado','Caio Nunes','Maya Costa'];
-const botName=botNames[Math.floor(Math.random()*botNames.length)];
-const botBalance=Math.max(500,Math.floor(item.price*(1.2+Math.random()*2.8)));
-auction={item,seconds:20,playerBid:0,botBid:0,botBalance,botMax:Math.floor(botBalance*(0.35+Math.random()*0.45)),botName,botNext:2+Math.floor(Math.random()*2),history:[]};
+auction={id:auctionId,item,seconds:20,playerBid:0,botBid:0,botName:botName||botNames[0],history:[]};
 const prev=document.getElementById('auctionModal');if(prev)prev.remove();
 const modal=document.createElement('div');modal.id='auctionModal';modal.style.cssText='position:fixed;inset:0;z-index:999;background:#05040df2;display:flex;align-items:center;justify-content:center;padding:14px;overflow:auto';
 const card=document.createElement('div');card.style.cssText='width:min(100%,460px);max-height:94dvh;overflow:auto;background:linear-gradient(145deg,#171222,#0b0911);border:1px solid #4b3b55;border-radius:22px;padding:20px;box-shadow:0 20px 70px #0009';
 card.innerHTML=`
 <div style="text-align:center;color:#f2c65d;font:20px Georgia,serif;letter-spacing:2px">⚒ LEILÃO DO REINO</div>
 <div style="text-align:center;font-size:58px;margin:12px 0 0">${item.emoji}</div>
-<h2 style="text-align:center;font:28px Georgia,serif;margin:4px 0 8px">${item.name}</h2>
-<p style="text-align:center;color:#aaa6bb;margin:0 0 18px">Valor estimado · 🪙 ${item.price.toLocaleString('pt-BR')}</p>
+<h2 style="text-align:center;font:28px Georgia,serif;margin:4px 0 8px">${escapeHtml(item.name)}</h2>
+<p style="text-align:center;color:#aaa6bb;margin:0 0 18px">Valor estimado · 🪙 ${Number(item.price).toLocaleString('pt-BR')}</p>
 <div style="display:flex;justify-content:space-between;gap:12px;border-block:1px solid #302b43;padding:15px 0">
- <div style="flex:1"><b>👑 Você</b><div style="color:#aaa6bb;font-size:13px;margin-top:6px">🪙 ${data.coins.toLocaleString('pt-BR')} disponíveis</div><strong id="auctionPlayer" style="display:block;color:#f2c65d;font-size:25px;margin-top:5px">0</strong></div>
- <div style="flex:1;text-align:right;border-left:3px solid #d94c67;padding-left:12px"><b>🤖 ${botName}</b><div style="color:#aaa6bb;font-size:13px;margin-top:6px">Bot · Saldo fictício</div><strong id="auctionBot" style="display:block;color:#f2c65d;font-size:25px;margin-top:5px">0</strong><small style="color:#aaa6bb">Saldo: 🪙 ${botBalance.toLocaleString('pt-BR')}</small></div>
+ <div style="flex:1"><b>👑 Você</b><div style="color:#aaa6bb;font-size:13px;margin-top:6px">🪙 Saldo disponível</div><strong id="auctionPlayer" style="display:block;color:#f2c65d;font-size:25px;margin-top:5px">0</strong></div>
+ <div style="flex:1;text-align:right;border-left:3px solid #d94c67;padding-left:12px"><b>🤖 ${escapeHtml(auction.botName)}</b><div style="color:#aaa6bb;font-size:13px;margin-top:6px">Bot · Saldo fictício</div><strong id="auctionBot" style="display:block;color:#f2c65d;font-size:25px;margin-top:5px">0</strong></div>
 </div>
 <div style="text-align:center;padding:15px 0"><div style="color:#aaa6bb">Maior lance</div><strong id="auctionHighest" style="font-size:38px;color:#f2c65d">🪙 0</strong><div style="color:#aaa6bb;font-size:13px">Tempo restante: <b id="auctionClock" style="color:white">20</b>s</div></div>
 <label for="auctionBidInput" style="color:#aaa6bb">Seu lance · MOEDAS FICTÍCIAS</label>
 <div style="display:flex;gap:8px;align-items:center"><input id="auctionBidInput" type="number" min="100" step="100" value="100" style="min-width:0;flex:1;margin:7px 0 10px"><button id="auctionBidButton" class="gold" style="white-space:nowrap;margin:7px 0 10px">🔨 Dar lance</button></div>
 <p style="text-align:right;color:#aaa6bb;font-size:12px;margin:0 0 12px">Mínimo: 🪙 <b id="auctionMin">100</b></p>
 <button id="auctionPassButton" style="width:100%;background:#0b0911;border:1px solid #40384e;color:#eee;border-radius:12px;padding:12px">Deixar o bot ganhar</button>
-<div style="margin-top:16px;border-top:1px solid #302b43;padding-top:12px"><b style="font:17px Georgia,serif">Últimos lances</b><div id="auctionHistory" style="font-size:13px;color:#aaa6bb;margin-top:8px">Ainda não houve lances.</div></div>
+<div style="margin-top:16px;border-top:1px solid #302b43;padding-top:12px"><b style="font:17px Georgia,serif">Últimos lances</b><div id="auctionHistory" style="font-size:13px;color:#aaa6bb;margin-top:8px">Aguardando os lances do servidor.</div></div>
 <p style="font-size:11px;color:#777386;text-align:center;margin:14px 0 0">Leilão de simulação. Nenhum dinheiro real é usado.</p>`;
 modal.appendChild(card);document.body.appendChild(modal);
 document.getElementById('auctionBidButton').addEventListener('click',bidAuction);
 document.getElementById('auctionPassButton').addEventListener('click',()=>finishAuction(true));
 renderAuctionStatus();
-auctionTimer=setInterval(function(){
+auctionTimer=setInterval(async()=>{
  if(!auction)return;
- auction.seconds--;
- auction.botNext--;
- if(auction.botNext<=0&&auction.botBid<auction.botMax){
-  const next=Math.min(auction.botMax,Math.max(100,auction.playerBid,auction.botBid)+Math.max(100,Math.floor(100+Math.random()*Math.max(150,item.price*.12))));
-  if(next>auction.botBid&&next<=auction.botBalance){auction.botBid=next;auction.history.unshift(auction.botName+' (bot) · 🪙 '+next.toLocaleString('pt-BR'));renderAuctionStatus()}
-  auction.botNext=2+Math.floor(Math.random()*3);
- }
- const ce=document.getElementById('auctionClock');if(ce)ce.textContent=auction.seconds;
- if(auction.seconds<=0)finishAuction();
+ try{
+  const {data:r,error}=await sb.rpc('game_auction_tick',{p_auction_id:auction.id});
+  if(error)throw error;
+  if(!auction)return;
+  if(r?.botBid!==undefined){if(r.botBid>auction.botBid)auction.history.unshift(auction.botName+' (bot) · 🪙 '+Number(r.botBid).toLocaleString('pt-BR'));auction.botBid=Number(r.botBid);auction.playerBid=Number(r.playerBid||0);if(r.status!=='active'){clearInterval(auctionTimer);return}}
+  auction.seconds=Math.max(0,Math.ceil((new Date(r.endsAt).getTime()-Date.now())/1000));
+  const ce=document.getElementById('auctionClock');if(ce)ce.textContent=auction.seconds;
+  renderAuctionStatus();
+  if(auction.seconds<=0)finishAuction();
+ }catch(e){clearInterval(auctionTimer);alert('Erro ao atualizar o leilão: '+e.message)}
 },1000);
 }
 function renderAuctionStatus(){
@@ -318,29 +317,27 @@ function renderAuctionStatus(){
  if(button){button.disabled=!canBid;button.textContent=auction.botBid>auction.playerBid?'🔨 Cobrir lance':'⏳ Aguarde o lance do bot';button.style.opacity=canBid?'1':'.55'}
  if(hist)hist.innerHTML=auction.history.length?auction.history.slice(0,5).map(x=>'<div style="padding:5px 0;border-bottom:1px solid #302b43">'+escapeHtml(x)+'</div>').join(''):'Aguardando o primeiro lance do bot.';
 }
-function bidAuction(){
+async function bidAuction(){
  if(!auction)return;
- if(auction.botBid<=auction.playerBid){alert('Você só pode dar lance quando o bot estiver na frente.');return}
- const input=document.getElementById('auctionBidInput');
- const min=Math.max(100,auction.botBid)+100;
- const amount=Math.floor(Number(input?.value));
- if(!Number.isSafeInteger(amount)||amount<min){alert('Para cobrir o bot, o lance mínimo é '+min.toLocaleString('pt-BR')+' moedas.');return}
- if(amount>data.coins){alert('Você não tem moedas fictícias suficientes para esse lance.');return}
- auction.playerBid=amount;auction.history.unshift('Você cobriu o bot · 🪙 '+amount.toLocaleString('pt-BR'));renderAuctionStatus();
+ const input=document.getElementById('auctionBidInput'),button=document.getElementById('auctionBidButton');
+ const amount=Math.floor(Number(input?.value));if(button)button.disabled=true;
+ try{
+  const {data:r,error}=await sb.rpc('game_auction_bid',{p_auction_id:auction.id,p_amount:amount});
+  if(error)throw error;
+  auction.playerBid=Number(r.playerBid);data.coins=Number(r.coins);auction.history.unshift('Você cobriu o bot · 🪙 '+amount.toLocaleString('pt-BR'));renderAuctionStatus();
+ }catch(e){alert(e.message)}finally{if(button&&auction)renderAuctionStatus()}
 }
-function finishAuction(forceBot=false){
- if(!auction)return;
- clearInterval(auctionTimer);let a=auction;auction=null;document.getElementById('auctionModal')?.remove();
- if(forceBot){a.botBid=Math.max(a.botBid,Math.min(a.botMax,100));}
- if(!forceBot&&a.playerBid>a.botBid){
-  data.coins-=a.playerBid;data.items.unshift(a.item);data.wins++;ensureProgress();data.progress.xp+=10;data.level=Math.max(1,1+Math.floor(data.progress.xp/250));
-  data.history.unshift('Leilão fictício vencido: '+a.item.name+' por '+a.playerBid.toLocaleString('pt-BR')+' moedas.');
-  alert('🏆 Você venceu o leilão fictício! '+a.item.name+' foi para seu inventário.');
- }else{
-  data.history.unshift('Leilão fictício perdido: '+a.item.name+' foi arrematado pelo bot '+a.botName+'.');
-  alert('O bot '+a.botName+' venceu o leilão fictício. Nenhuma moeda foi descontada de você.');
- }
- save();render();
+async function finishAuction(forceBot=false){
+ if(!auction||auction.finishing)return;
+ auction.finishing=true;clearInterval(auctionTimer);const a=auction;
+ try{
+  const {data:r,error}=await sb.rpc('game_auction_finish',{p_auction_id:a.id,p_force_bot:!!forceBot});
+  if(error)throw error;
+  if(!r?.state)throw new Error('O servidor não retornou o resultado.');
+  auction=null;document.getElementById('auctionModal')?.remove();
+  data={...defaultGameState(),...r.state};save();render();
+  alert(r.won?'🏆 Você venceu o leilão fictício! '+a.item.name+' foi para seu inventário.':'O bot '+a.botName+' venceu o leilão fictício. Nenhuma moeda ficou reservada.');
+ }catch(e){auction.finishing=false;alert('Não foi possível encerrar o leilão: '+e.message)}
 }
 async function daily(){const btn=document.querySelector('[onclick="daily()"]');if(btn)btn.disabled=true;try{const {data:state,error}=await sb.rpc('game_claim_daily_bonus');if(error)throw error;if(!state){throw new Error('O servidor não retornou o progresso atualizado.')}data={...defaultGameState(),...state};save();render();alert('+250 moedas e +10 XP!')}catch(error){alert(error.message==='Bônus diário já coletado!'?error.message:'Não foi possível coletar o bônus: '+error.message)}finally{if(btn)btn.disabled=false}}function setFilter(f){filter=f;render()}async function sellItem(id){const buttons=[...document.querySelectorAll('[onclick^="sellItem("]')];buttons.forEach(b=>b.disabled=true);try{const {data:state,error}=await sb.rpc('game_sell_item',{p_item_id:String(id)});if(error)throw error;if(!state)throw new Error('O servidor não retornou o progresso atualizado.');data={...defaultGameState(),...state};save();render()}catch(error){alert('Não foi possível vender o item: '+error.message)}finally{buttons.forEach(b=>b.disabled=false)}}function getAdminChestConfig(){try{return JSON.parse(localStorage.getItem('mdleiloes_admin_chest')||'null')}catch{return null}}function scheduleAdminChest(){if(!isAdminOwner())return;let cfg={chest:admChest.value,itemName:admItem.value,mutation:admMutation.value,firstOnly:admFirstOnly.checked,createdBy:userKey};localStorage.setItem('mdleiloes_admin_chest',JSON.stringify(cfg));admScheduledInfo.textContent='Programado: '+cfg.itemName+' no '+cfg.chest+' com mutação '+cfg.mutation+'.';alert('Recompensa programada para o próximo baú correspondente!');}function populateAdminControls(){if(!isAdminOwner()||populateAdminControls.initialized)return;if(!admChest.options.length)admChest.innerHTML=rooms.map(r=>'<option>'+r[0]+'</option>').join('');if(!admItem.options.length)admItem.innerHTML=pool.map(i=>'<option>'+i[1]+'</option>').join('');if(!admMutation.options.length)admMutation.innerHTML=mutations.map(m=>'<option value="'+m[0]+'">'+m[0]+' (x'+m[2].toLocaleString('pt-BR')+')</option>').join('');const cfg=getAdminChestConfig();if(cfg){admChest.value=cfg.chest;admItem.value=cfg.itemName;admMutation.value=cfg.mutation;admFirstOnly.checked=!!cfg.firstOnly;admScheduledInfo.textContent='Programado: '+cfg.itemName+' no '+cfg.chest+' com mutação '+cfg.mutation+'.'}populateAdminControls.initialized=true;}let indexRarity='Todos',indexMutation='Normal';
 function setIndexMutation(m){indexMutation=mutations.some(x=>x[0]===m)?m:'Normal';indexRarity='Todos';renderIndex()}
