@@ -121,3 +121,7 @@ Execute `supabase/migrations/20261126_lock_client_game_state_writes.sql` no SQL 
 
 ### Correção adicional de privilégios de game_state
 A consulta de verificação mostrou que ainda existiam privilégios DELETE, REFERENCES, TRIGGER e TRUNCATE. Execute também `supabase/migrations/20261126_revoke_all_game_state_client_privileges.sql`. Ela revoga todos os privilégios de tabela de `PUBLIC`, `anon` e `authenticated`, concedendo apenas SELECT a `authenticated`. O resultado esperado da consulta é: apenas uma linha `authenticated | SELECT`; nenhuma linha para `anon` ou `PUBLIC`.
+
+
+## Inicialização e recarga do progresso pelo servidor
+Execute `supabase/migrations/20261126_server_state_bootstrap.sql` no SQL Editor. O frontend passa a criar/carregar o estado inicial por RPC autenticada, sem confiar em saldo ou inventário recuperados do armazenamento local. A ação de sincronizar consulta novamente o estado oficial no Supabase; o armazenamento local é somente cache visual.
