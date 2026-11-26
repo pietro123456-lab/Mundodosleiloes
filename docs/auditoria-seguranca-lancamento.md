@@ -97,3 +97,7 @@ A migration `20261126_server_auction_validation.sql` cria `game_auctions` sem ac
 
 ## Atualização — bloqueio de gravações diretas em game_state
 Foi adicionada a migration `20261126_lock_client_game_state_writes.sql`. Ela revoga INSERT/UPDATE de `authenticated` em `game_state` e inclui trigger de defesa em profundidade que impede alteração do estado por sessões autenticadas. As funções `SECURITY DEFINER` do jogo continuam sendo o caminho de escrita. O frontend foi ajustado para não fazer mais upsert do JSON completo. A migration ainda precisa ser executada no Supabase e os fluxos do jogo precisam ser testados após a mudança; não há certificação de lançamento neste momento.
+
+
+## Correção adicional de privilégios residuais
+A primeira consulta pós-migration mostrou que permaneciam privilégios DELETE, REFERENCES, TRIGGER e TRUNCATE em `game_state`. Foi publicada a migration corretiva `20261126_revoke_all_game_state_client_privileges.sql`, que executa REVOKE ALL PRIVILEGES para PUBLIC, anon e authenticated, e concede apenas SELECT a authenticated. A verificação esperada é uma única linha: authenticated / SELECT. A correção ainda precisa ser executada e conferida no banco real.
