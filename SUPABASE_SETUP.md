@@ -97,3 +97,7 @@ Execute [20261125_server_progress_rewards.sql](supabase/migrations/20261125_serv
 ## Renda AFK calculada no servidor
 
 Execute também `supabase/migrations/20261125_server_afk_income.sql` no SQL Editor do Supabase. A função `game_collect_afk_income()` usa o relógio do banco, limita o período acumulado a 12 horas, calcula a renda com base nos itens armazenados e grava o novo saldo de forma transacional. O frontend passa a consultar essa função na entrada e a cada 15 segundos. Sem essa migration, a renda AFK ficará temporariamente indisponível; não tente substituir a função por um saldo calculado no navegador.
+
+
+## Compra de sorte no servidor
+Execute `supabase/migrations/20261125_server_luck_purchase.sql` no SQL Editor. A compra valida o multiplicador e o preço no banco, desconta o saldo e acumula 15 minutos usando o relógio do servidor.
