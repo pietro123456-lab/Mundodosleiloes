@@ -977,7 +977,7 @@ begin
  if now_at>=a.next_bot_at and now_at<a.ends_at and a.bot_bid<a.bot_max then
    n:=least(a.bot_max,greatest(100,a.player_bid,a.bot_bid)+greatest(100,floor(100+random()*greatest(150,(a.item->>'price')::numeric*0.12))::bigint));
    if n>a.bot_bid and n<=a.bot_balance then
-     update public.game_auctions set bot_bid=n,player_bid=0,next_bot_at=now_at+make_interval(secs=2+floor(random()*3)::integer) where id=a.id returning * into a;
+     update public.game_auctions set bot_bid=n,player_bid=0,next_bot_at=now_at+make_interval(secs => 2+floor(random()*3)::integer) where id=a.id returning * into a;
      if a.player_bid>0 then null; end if;
      if coalesce((select (state->>'coins')::numeric from public.game_state where user_id=a.user_id),0)>=0 then
        select state into st from public.game_state where user_id=a.user_id for update;
