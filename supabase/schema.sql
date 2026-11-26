@@ -294,7 +294,7 @@ begin
         ) as position,
         p.id as user_id,
         p.username,
-        coalesce(nullif(gs.state ->> 'coins', '')::bigint, 1000) as coins
+        coalesce(nullif(gs.state ->> 'coins', '')::numeric, 1000)::text as coins
       from public.profiles p
       left join public.game_state gs on gs.user_id = p.id
     ) as ranked
@@ -440,7 +440,7 @@ grant execute on function public.admin_manage_player(uuid,text) to authenticated
 
 -- Atualiza o ranking para ignorar contas ocultadas pela administração.
 create or replace function public.leaderboard_top_players()
-returns table("position" bigint, user_id uuid, username text, coins bigint)
+returns table("position" bigint, user_id uuid, username text, coins text)
 language plpgsql
 security definer
 set search_path = ''
@@ -455,12 +455,12 @@ begin
     from (
       select
         row_number() over (
-          order by coalesce(nullif(gs.state ->> 'coins', '')::bigint, 1000) desc,
+          order by coalesce(nullif(gs.state ->> 'coins', '')::numeric, 1000) desc,
                    lower(p.username)
         ) as position,
         p.id as user_id,
         p.username,
-        coalesce(nullif(gs.state ->> 'coins', '')::bigint, 1000) as coins
+        coalesce(nullif(gs.state ->> 'coins', '')::numeric, 1000)::text as coins
       from public.profiles p
       left join public.game_state gs on gs.user_id = p.id
       where p.ranking_hidden = false
