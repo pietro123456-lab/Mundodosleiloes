@@ -90,7 +90,8 @@ begin
  elsif now_at>=a.next_bot_at then
    update public.game_auctions set next_bot_at=now_at+interval '2 seconds' where id=a.id returning * into a;
  end if;
- return jsonb_build_object('botBid',a.bot_bid,'playerBid',a.player_bid,'botName',a.bot_name,'endsAt',a.ends_at,'status',a.status);
+ select state into st from public.game_state where user_id=a.user_id;
+ return jsonb_build_object('botBid',a.bot_bid,'playerBid',a.player_bid,'coins',coalesce((st->>'coins')::numeric,0),'botName',a.bot_name,'endsAt',a.ends_at,'status',a.status);
 end; $$;
 
 create or replace function public.game_auction_bid(p_auction_id uuid,p_amount bigint)
