@@ -87,3 +87,8 @@ A migration `supabase/migrations/20261125_core_economy_transactions.sql` adicion
 ## Atualização — compatibilidade com saldos grandes
 
 Execute também [20261125_large_balance_admin_ranking.sql](supabase/migrations/20261125_large_balance_admin_ranking.sql) no SQL Editor. Essa migration atualiza o ranking e a concessão administrativa de moedas para trabalhar com saldos maiores que BIGINT. O ranking retorna o saldo como texto para não perder dígitos no JSON.
+
+
+## Atualização — recompensas de missões e conquistas
+
+Execute [20261125_server_progress_rewards.sql](supabase/migrations/20261125_server_progress_rewards.sql) no SQL Editor. O resgate de missões e conquistas agora valida os requisitos e concede moedas/XP no servidor, com proteção contra resgate duplicado.
