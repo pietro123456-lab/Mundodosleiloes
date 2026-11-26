@@ -475,6 +475,7 @@ grant execute on function public.leaderboard_top_players() to authenticated;
 
 
 -- Recompensas e vendas executadas no servidor, com bloqueio transacional por jogador.
+-- Recompensas e vendas executadas no servidor, com bloqueio transacional por jogador.
 create or replace function public.game_claim_daily_bonus()
 returns jsonb
 language plpgsql
@@ -485,7 +486,7 @@ declare
   v_uid uuid := auth.uid();
   v_state jsonb;
   v_today text := to_char(timezone('utc', now())::date, 'YYYY-MM-DD');
-  v_coins bigint;
+  v_coins numeric;
   v_xp bigint;
 begin
   if v_uid is null then raise exception 'É necessário entrar na conta.'; end if;
@@ -501,7 +502,7 @@ begin
     raise exception 'Bônus diário já coletado!';
   end if;
 
-  v_coins := greatest(0, coalesce(nullif(v_state->>'coins','')::bigint,1000)) + 250;
+  v_coins := greatest(0, coalesce(nullif(v_state->>'coins','')::numeric,1000)) + 250;
   v_xp := greatest(0, coalesce(nullif(v_state#>>'{progress,xp}','')::bigint,0)) + 10;
 
   v_state := jsonb_set(v_state,'{coins}',to_jsonb(v_coins),true);
@@ -529,7 +530,7 @@ declare
   v_remaining jsonb;
   v_price numeric;
   v_gain bigint;
-  v_coins bigint;
+  v_coins numeric;
 begin
   if v_uid is null then raise exception 'É necessário entrar na conta.'; end if;
   if p_item_id is null or length(p_item_id)>100 then raise exception 'Item inválido.'; end if;
@@ -558,8 +559,8 @@ begin
   from jsonb_array_elements(v_items) e(value)
   where e.value->>'id' <> p_item_id;
 
-  v_coins := greatest(0,coalesce(nullif(v_state->>'coins','')::bigint,1000)) + v_gain;
-  if v_coins > 9000000000000000 then raise exception 'Saldo máximo excedido.'; end if;
+  v_coins := greatest(0,coalesce(nullif(v_state->>'coins','')::numeric,1000)) + v_gain;
+  if v_coins > 999999999999999999999999999999 then raise exception 'Saldo máximo excedido.'; end if;
 
   v_state := jsonb_set(v_state,'{items}',v_remaining,true);
   v_state := jsonb_set(v_state,'{coins}',to_jsonb(v_coins),true);
@@ -574,3 +575,4 @@ revoke all on function public.game_claim_daily_bonus() from public, anon;
 revoke all on function public.game_sell_item(text) from public, anon;
 grant execute on function public.game_claim_daily_bonus() to authenticated;
 grant execute on function public.game_sell_item(text) to authenticated;
+
