@@ -296,7 +296,7 @@ auctionTimer=setInterval(async()=>{
   const {data:r,error}=await sb.rpc('game_auction_tick',{p_auction_id:auction.id});
   if(error)throw error;
   if(!auction)return;
-  if(r?.botBid!==undefined){if(r.botBid>auction.botBid)auction.history.unshift(auction.botName+' (bot) · 🪙 '+Number(r.botBid).toLocaleString('pt-BR'));auction.botBid=Number(r.botBid);auction.playerBid=Number(r.playerBid||0);if(r.status!=='active'){clearInterval(auctionTimer);return}}
+  if(r?.botBid!==undefined){if(r.botBid>auction.botBid)auction.history.unshift(auction.botName+' (bot) · 🪙 '+Number(r.botBid).toLocaleString('pt-BR'));auction.botBid=Number(r.botBid);auction.playerBid=Number(r.playerBid||0);if(r.coins!==undefined)data.coins=Number(r.coins);if(r.status!=='active'){clearInterval(auctionTimer);return}}
   auction.seconds=Math.max(0,Math.ceil((new Date(r.endsAt).getTime()-Date.now())/1000));
   const ce=document.getElementById('auctionClock');if(ce)ce.textContent=auction.seconds;
   renderAuctionStatus();
