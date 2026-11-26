@@ -101,3 +101,7 @@ Foi adicionada a migration `20261126_lock_client_game_state_writes.sql`. Ela rev
 
 ## Correção adicional de privilégios residuais
 A primeira consulta pós-migration mostrou que permaneciam privilégios DELETE, REFERENCES, TRIGGER e TRUNCATE em `game_state`. Foi publicada a migration corretiva `20261126_revoke_all_game_state_client_privileges.sql`, que executa REVOKE ALL PRIVILEGES para PUBLIC, anon e authenticated, e concede apenas SELECT a authenticated. A verificação esperada é uma única linha: authenticated / SELECT. A correção ainda precisa ser executada e conferida no banco real.
+
+
+## Atualização — estado inicial e recarga autoritativa
+Foi adicionada a RPC `game_get_or_create_state()` para inicializar o estado padrão dentro do Supabase, sem INSERT direto pelo navegador. O frontend não usa mais o estado econômico do localStorage como fallback de login e a ação de sincronizar consulta o servidor. O cache local é apenas visual. A migration precisa ser executada no projeto Supabase e o fluxo de login/primeira conta/conta existente deve ser testado.
