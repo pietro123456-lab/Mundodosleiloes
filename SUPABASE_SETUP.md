@@ -82,3 +82,8 @@ A migration `supabase/migrations/20261125_core_economy_transactions.sql` adicion
 - `game_sell_item(p_item_id)`: confere se o item pertence ao jogador, calcula 70% do preço armazenado e remove o item e credita as moedas na mesma transação.
 
 **Ação necessária:** execute o arquivo da migration no SQL Editor do Supabase antes de usar a versão atualizada do site. Essas duas ações já foram ligadas ao frontend. Isso é uma etapa parcial: a escrita direta em `game_state` permanece habilitada até migrar todas as demais mecânicas.
+
+
+## Atualização — compatibilidade com saldos grandes
+
+Execute também [20261125_large_balance_admin_ranking.sql](supabase/migrations/20261125_large_balance_admin_ranking.sql) no SQL Editor. Essa migration atualiza o ranking e a concessão administrativa de moedas para trabalhar com saldos maiores que BIGINT. O ranking retorna o saldo como texto para não perder dígitos no JSON.
