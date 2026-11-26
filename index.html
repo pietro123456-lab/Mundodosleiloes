@@ -99,22 +99,11 @@ function setSyncStatus(message,color){const el=document.getElementById('syncStat
 function subscribeGameState(){if(gameStateChannel){sb.removeChannel(gameStateChannel);gameStateChannel=null;}const uid=userKey;if(!uid)return;gameStateChannel=sb.channel('game-state-'+uid).on('postgres_changes',{event:'UPDATE',schema:'public',table:'game_state',filter:'user_id=eq.'+uid},payload=>{if(authSession?.user?.id!==uid||!payload.new?.state)return;if(localChangeVersion>lastSyncedVersion){setSyncStatus('Alterações locais aguardando sincronização…','#f2c65d');return;}data={...defaultGameState(),...payload.new.state};if(!Array.isArray(data.items))data.items=[];if(!Array.isArray(data.history))data.history=[];localStorage.setItem('mdleiloes_data_'+uid,JSON.stringify(data));if(!document.getElementById('game').classList.contains('hidden'))render();}).subscribe();}
 function syncNow(){
  if(!userKey||!data||!authSession?.user?.id)return Promise.resolve(true);
- const uid=authSession.user.id;
- const snapshot=JSON.parse(JSON.stringify(data));
- const snapshotVersion=localChangeVersion;
- setSyncStatus('Salvando na nuvem…','#f2c65d');
- syncQueue=syncQueue.then(async()=>{
-  const {error}=await sb.from('game_state').upsert({user_id:uid,state:snapshot,updated_at:new Date().toISOString()},{onConflict:'user_id'});
-  if(error)throw error;
-  lastSyncedVersion=Math.max(lastSyncedVersion,snapshotVersion);
-  if(authSession?.user?.id===uid)setSyncStatus('Salvo na nuvem','var(--green)');
-  return true;
- }).catch(error=>{
-  console.error('Falha ao sincronizar progresso:',error?.message||error);
-  if(authSession?.user?.id===uid)setSyncStatus('Erro ao salvar na nuvem — tente novamente','#ff8f82');
-  return false;
- });
- return syncQueue;
+ // O estado econômico é gravado exclusivamente por RPCs SECURITY DEFINER.
+ // Não enviar JSON do navegador para game_state.
+ lastSyncedVersion=Math.max(lastSyncedVersion,localChangeVersion);
+ setSyncStatus('Progresso controlado pelo servidor','var(--green)');
+ return Promise.resolve(true);
 }
 function save(){
  if(!userKey||!data)return;
