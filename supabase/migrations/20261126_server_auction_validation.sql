@@ -69,20 +69,20 @@ grant execute on function public.game_open_chest(text) to authenticated;
 
 create or replace function public.game_auction_tick(p_auction_id uuid)
 returns jsonb language plpgsql security definer set search_path='' as $$
-declare a public.game_auctions%rowtype; st jsonb; n bigint; now_at timestamptz:=clock_timestamp();
+declare a public.game_auctions%rowtype; st jsonb; n bigint; old_player_bid bigint; now_at timestamptz:=clock_timestamp();
 begin
  select * into a from public.game_auctions where id=p_auction_id and user_id=auth.uid() for update;
  if not found then raise exception 'Leilão não encontrado.'; end if;
  if a.status<>'active' then return jsonb_build_object('auction',to_jsonb(a)); end if;
  if now_at>=a.next_bot_at and now_at<a.ends_at and a.bot_bid<a.bot_max then
+   old_player_bid:=a.player_bid;
    n:=least(a.bot_max,greatest(100,a.player_bid,a.bot_bid)+greatest(100,floor(100+random()*greatest(150,(a.item->>'price')::numeric*0.12))::bigint));
    if n>a.bot_bid and n<=a.bot_balance then
      update public.game_auctions set bot_bid=n,player_bid=0,next_bot_at=now_at+make_interval(secs=2+floor(random()*3)::integer) where id=a.id returning * into a;
-     if a.player_bid>0 then null; end if;
      if coalesce((select (state->>'coins')::numeric from public.game_state where user_id=a.user_id),0)>=0 then
        select state into st from public.game_state where user_id=a.user_id for update;
        if coalesce((st->>'coins')::numeric,0)>=0 then
-         st:=jsonb_set(st,'{coins}',to_jsonb(coalesce((st->>'coins')::numeric,0)+a.player_bid),true);
+         st:=jsonb_set(st,'{coins}',to_jsonb(coalesce((st->>'coins')::numeric,0)+old_player_bid),true);
          update public.game_state set state=st,updated_at=now_at where user_id=a.user_id;
        end if;
      end if;
@@ -125,6 +125,7 @@ begin
    st:=jsonb_set(st,'{items}',coalesce(st->'items','[]'::jsonb)||jsonb_build_array(a.item),true);
    st:=jsonb_set(st,'{wins}',to_jsonb(coalesce((st->>'wins')::integer,0)+1),true);
    st:=jsonb_set(st,'{progress,xp}',to_jsonb(coalesce((st#>>'{progress,xp}')::integer,0)+10),true);
+   st:=jsonb_set(st,'{level}',to_jsonb(greatest(1,1+floor((coalesce((st#>>'{progress,xp}')::integer,0)+10)/250.0)::integer)),true);
    st:=jsonb_set(st,'{history}',jsonb_build_array('Leilão fictício vencido: '||(a.item->>'name')||' por '||a.player_bid||' moedas.')||coalesce(st->'history','[]'::jsonb),true);
  else
    st:=jsonb_set(st,'{coins}',to_jsonb(coalesce((st->>'coins')::numeric,0)+a.player_bid),true);
