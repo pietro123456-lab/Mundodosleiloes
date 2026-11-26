@@ -89,3 +89,7 @@ A RPC `game_sell_item` agora rejeita itens com raridade `Personalizado`, impedin
 
 ## Atualização — abertura de baús
 A RPC `game_open_chest(text)` valida baú/preço/saldo, controla a abertura grátis diária por data UTC, aplica o multiplicador de sorte ativo e sorteia item/raridade/mutação no banco, atualizando o estado sob bloqueio de linha. A interface inicia a simulação do leilão com o item retornado. O encerramento do leilão fictício e os lances contra bots ainda são processados no navegador, e `game_state` ainda aceita gravação direta; portanto, esta etapa não elimina a possibilidade de adulteração dessas partes.
+
+
+## Atualização — validação de leilões de baús
+A migration `20261126_server_auction_validation.sql` cria `game_auctions` sem acesso direto do cliente e adiciona RPCs autenticadas para atualizar o relógio/lances do bot, registrar lance do jogador e encerrar a disputa. O banco verifica propriedade, estado, prazo, liderança do bot, incremento mínimo e saldo; reserva o lance, reembolsa quando o bot supera e só entrega item/XP no encerramento validado. A UI apenas apresenta os dados retornados pelo servidor. Observação: a tabela `game_state` ainda permite escrita direta, então outras partes do jogo continuam exigindo migração antes de uma declaração de segurança global.
