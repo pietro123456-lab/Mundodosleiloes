@@ -101,3 +101,7 @@ Execute também `supabase/migrations/20261125_server_afk_income.sql` no SQL Edit
 
 ## Compra de sorte no servidor
 Execute `supabase/migrations/20261125_server_luck_purchase.sql` no SQL Editor. A compra valida o multiplicador e o preço no banco, desconta o saldo e acumula 15 minutos usando o relógio do servidor.
+
+
+## Bloqueio de venda de itens personalizados
+Execute `supabase/migrations/20261125_block_custom_item_sales.sql` no SQL Editor. Itens personalizados não geram moedas ao serem vendidos; isso evita que um preço escolhido no navegador seja convertido em saldo.
