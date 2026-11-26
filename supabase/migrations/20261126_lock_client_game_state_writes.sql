@@ -41,7 +41,7 @@ before insert or update on public.game_state
 for each row execute function public.guard_game_state_client_writes();
 
 revoke all on function public.guard_game_state_client_writes() from public, anon, authenticated;
-revoke insert, update on table public.game_state from public, anon, authenticated;
+revoke all privileges on table public.game_state from public, anon, authenticated;
 grant select on table public.game_state to authenticated;
 
 -- Verificação dos privilégios efetivos:
